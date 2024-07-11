@@ -2112,7 +2112,7 @@ class StatementAnalyzer
         @Override
         protected Scope visitMerge(Merge merge, Optional<Scope> scope)
         {
-            throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "This connector does not support merge");
+            throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "This connector does not support MERGE INTO statements");
         }
 
         private Scope analyzeJoinUsing(Join node, List<Identifier> columns, Optional<Scope> scope, Scope left, Scope right)
