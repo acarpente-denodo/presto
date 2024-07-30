@@ -407,4 +407,17 @@ public abstract class AbstractRowBlock
 
         return createRowBlockInternal(getOffsetBase(), getPositionCount() + 1, rowIsNull, offsets, getRawFieldBlocks());
     }
+
+    // TODO: Check if the following three methods are correct
+    @Override
+    public Block getUnderlyingValueBlock()
+    {
+        return this;
+    }
+
+    @Override
+    public int getUnderlyingValuePosition(int position)
+    {
+        return position;
+    }
 }

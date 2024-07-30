@@ -31,7 +31,8 @@ import static java.util.Objects.requireNonNull;
         @JsonSubTypes.Type(value = ExecutionWriterTarget.InsertHandle.class, name = "InsertHandle"),
         @JsonSubTypes.Type(value = ExecutionWriterTarget.DeleteHandle.class, name = "DeleteHandle"),
         @JsonSubTypes.Type(value = ExecutionWriterTarget.RefreshMaterializedViewHandle.class, name = "RefreshMaterializedViewHandle"),
-        @JsonSubTypes.Type(value = ExecutionWriterTarget.UpdateHandle.class, name = "UpdateHandle")})
+        @JsonSubTypes.Type(value = ExecutionWriterTarget.UpdateHandle.class, name = "UpdateHandle"),
+        @JsonSubTypes.Type(value = ExecutionWriterTarget.MergeHandle.class, name = "MergeHandle")})
 @SuppressWarnings({"EmptyClass", "ClassMayBeInterface"})
 public abstract class ExecutionWriterTarget
 {
@@ -188,6 +189,39 @@ public abstract class ExecutionWriterTarget
 
         @JsonProperty
         public TableHandle getHandle()
+        {
+            return handle;
+        }
+
+        @JsonProperty
+        public SchemaTableName getSchemaTableName()
+        {
+            return schemaTableName;
+        }
+
+        @Override
+        public String toString()
+        {
+            return handle.toString();
+        }
+    }
+
+    public static class MergeHandle
+            extends ExecutionWriterTarget
+    {
+        private final com.facebook.presto.metadata.MergeHandle handle;
+        private final SchemaTableName schemaTableName;
+
+        public MergeHandle(
+                @JsonProperty("handle") com.facebook.presto.metadata.MergeHandle handle,
+                @JsonProperty("schemaTableName") SchemaTableName schemaTableName)
+        {
+            this.handle = requireNonNull(handle, "handle is null");
+            this.schemaTableName = requireNonNull(schemaTableName, "schemaTableName is null");
+        }
+
+        @JsonProperty
+        public com.facebook.presto.metadata.MergeHandle getHandle()
         {
             return handle;
         }

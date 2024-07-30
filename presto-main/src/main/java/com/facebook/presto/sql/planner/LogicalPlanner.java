@@ -64,6 +64,7 @@ import com.facebook.presto.sql.tree.Expression;
 import com.facebook.presto.sql.tree.Identifier;
 import com.facebook.presto.sql.tree.Insert;
 import com.facebook.presto.sql.tree.LambdaArgumentDeclaration;
+import com.facebook.presto.sql.tree.Merge;
 import com.facebook.presto.sql.tree.NodeRef;
 import com.facebook.presto.sql.tree.NullLiteral;
 import com.facebook.presto.sql.tree.Parameter;
@@ -177,6 +178,9 @@ public class LogicalPlanner
         }
         if (statement instanceof Update) {
             return createUpdatePlan(analysis, (Update) statement);
+        }
+        if (statement instanceof Merge) {
+            return createMergePlan(analysis, (Merge) statement);
         }
         else if (statement instanceof Query) {
             return createRelationPlan(analysis, (Query) statement, new SqlPlannerContext(0));
@@ -539,6 +543,63 @@ public class LogicalPlanner
                 Optional.empty());
 
         return new RelationPlan(commitNode, analysis.getScope(node), commitNode.getOutputVariables());
+    }
+
+    // TODO: Implement the createMergePlan() method.
+    private RelationPlan createMergePlan(Analysis analysis, Merge node)
+    {
+/*        MergeWriterNode mergeNode = new QueryPlanner(analysis, symbolAllocator, idAllocator, buildLambdaDeclarationToSymbolMap(analysis, symbolAllocator), plannerContext, Optional.empty(), session, ImmutableMap.of())
+                .plan(node);
+
+        TableFinishNode commitNode = new TableFinishNode(
+                idAllocator.getNextId(),
+                mergeNode,
+                mergeNode.getTarget(),
+                symbolAllocator.newSymbol("rows", BIGINT),
+                Optional.empty(),
+                Optional.empty());
+
+        return new RelationPlan(commitNode, analysis.getScope(node), commitNode.getOutputSymbols(), Optional.empty());*/
+
+// TODO: Code copied from createUpdatePlan() method. Need to change it to implement the create merge plan.
+/*        SqlPlannerContext context = new SqlPlannerContext(0);
+        UpdateNode updateNode = new QueryPlanner(analysis, variableAllocator, idAllocator, buildLambdaDeclarationToVariableMap(analysis, variableAllocator), metadata, session, context, sqlParser)
+                .plan(node);
+
+        TableHandle handle = analysis.getTableHandle(node.getTable());
+        ImmutableList.Builder<String> updatedColumnNamesBuilder = ImmutableList.builder();
+        ImmutableList.Builder<ColumnHandle> updatedColumnHandlesBuilder = ImmutableList.builder();
+
+        TableMetadata tableMetadata = metadata.getTableMetadata(session, handle);
+        Map<String, ColumnHandle> columnMap = metadata.getColumnHandles(session, handle);
+        List<ColumnMetadata> dataColumns = tableMetadata.getMetadata().getColumns().stream()
+                .filter(column -> !column.isHidden())
+                .collect(toImmutableList());
+        List<String> targetColumnNames = node.getAssignments().stream()
+                .map(assignment -> assignment.getName().getValue())
+                .collect(toImmutableList());
+
+        for (ColumnMetadata columnMetadata : dataColumns) {
+            String name = columnMetadata.getName();
+            int index = targetColumnNames.indexOf(name);
+            if (index >= 0) {
+                updatedColumnNamesBuilder.add(name);
+                updatedColumnHandlesBuilder.add(requireNonNull(columnMap.get(name), "columnMap didn't contain name"));
+            }
+        }
+
+        UpdateTarget updateTarget = new UpdateTarget(handle, metadata.getTableMetadata(session, handle).getTable(), updatedColumnNamesBuilder.build(), updatedColumnHandlesBuilder.build());
+        TableFinishNode commitNode = new TableFinishNode(
+                updateNode.getSourceLocation(),
+                idAllocator.getNextId(),
+                updateNode,
+                Optional.of(updateTarget),
+                variableAllocator.newVariable("rows", BIGINT),
+                Optional.empty(),
+                Optional.empty());
+
+        return new RelationPlan(commitNode, analysis.getScope(node), commitNode.getOutputVariables());*/
+        return null;
     }
 
     private PlanNode createOutputPlan(RelationPlan plan, Analysis analysis)
