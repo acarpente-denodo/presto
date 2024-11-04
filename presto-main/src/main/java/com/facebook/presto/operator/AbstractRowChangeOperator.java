@@ -48,7 +48,7 @@ public abstract class AbstractRowChangeOperator
     protected State state = State.RUNNING;
     protected long rowCount;
     private boolean closed;
-    private ListenableFuture<Collection<Slice>> finishFuture;
+    protected ListenableFuture<Collection<Slice>> finishFuture;
     private Supplier<Optional<UpdatablePageSource>> pageSource = Optional::empty;
     private final JsonCodec<TableCommitContext> tableCommitContextCodec;
 
@@ -158,6 +158,7 @@ public abstract class AbstractRowChangeOperator
             }
             else {
                 pageSource.get().ifPresent(UpdatablePageSource::abort);
+                abort();
             }
         }
     }
@@ -173,4 +174,6 @@ public abstract class AbstractRowChangeOperator
         checkState(source.isPresent(), "UpdatablePageSource not set");
         return source.get();
     }
+
+    protected void abort() {}
 }

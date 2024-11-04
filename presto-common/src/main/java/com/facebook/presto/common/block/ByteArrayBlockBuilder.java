@@ -350,4 +350,23 @@ public class ByteArrayBlockBuilder
     {
         return 0;
     }
+
+    // TODO: Check if the following three methods are correct
+    @Override
+    public Block copyWithAppendedNull()
+    {
+        throw new UnsupportedOperationException("ByteArrayBlockBuilder does not support newBlockWithAppendedNull()");
+    }
+
+    @Override
+    public Block getUnderlyingValueBlock()
+    {
+        return this;
+    }
+
+    @Override
+    public int getUnderlyingValuePosition(int position)
+    {
+        return position;
+    }
 }

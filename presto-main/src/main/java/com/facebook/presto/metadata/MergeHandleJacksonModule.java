@@ -11,26 +11,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.facebook.presto.sql.tree;
+package com.facebook.presto.metadata;
 
-import java.util.List;
-import java.util.Optional;
+import com.facebook.presto.spi.ConnectorMergeHandle;
 
-public abstract class MergeCase
-        extends Node
+import javax.inject.Inject;
+
+public class MergeHandleJacksonModule
+        extends AbstractTypedJacksonModule<ConnectorMergeHandle>
 {
-    protected MergeCase(Optional<NodeLocation> location)
+    @Inject
+    public MergeHandleJacksonModule(HandleResolver handleResolver)
     {
-        super(location);
+        super(ConnectorMergeHandle.class,
+                handleResolver::getId,
+                handleResolver::getMergeHandleClass);
     }
-
-    @Override
-    public <R, C> R accept(AstVisitor<R, C> visitor, C context)
-    {
-        return visitor.visitMergeCase(this, context);
-    }
-
-    public abstract List<Identifier> getSetColumns();
-
-    public abstract List<Expression> getSetExpressions();
 }
