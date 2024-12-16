@@ -46,6 +46,7 @@ import com.facebook.presto.sql.planner.plan.IndexJoinNode;
 import com.facebook.presto.sql.planner.plan.InternalPlanVisitor;
 import com.facebook.presto.sql.planner.plan.JoinNode;
 import com.facebook.presto.sql.planner.plan.LateralJoinNode;
+import com.facebook.presto.sql.planner.plan.MergeWriterNode;
 import com.facebook.presto.sql.planner.plan.RowNumberNode;
 import com.facebook.presto.sql.planner.plan.SemiJoinNode;
 import com.facebook.presto.sql.planner.plan.SpatialJoinNode;
@@ -658,6 +659,18 @@ public class AddLocalExchanges
                             originalTableWriterNode.getTableCommitContextVariable(),
                             statisticAggregations.map(StatisticAggregations.Parts::getIntermediateAggregation)),
                     gatheringExchange.getProperties());
+        }
+
+        //
+        // Merge
+        //
+
+        @Override
+        public PlanWithProperties visitMergeWriter(MergeWriterNode node, StreamPreferredProperties parentPreferences)
+        {
+            // TODO: ver la implementación de Trino.
+            // return visitPartitionedWriter(node, node.getPartitioningScheme(), node.getSource(), parentPreferences);
+            throw new IllegalArgumentException("Método AddLocalExchanges.visitMergeWriter() pendiente de implementar");
         }
 
         @Override

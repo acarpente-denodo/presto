@@ -13,7 +13,7 @@
  */
 package com.facebook.presto.iceberg;
 
-import com.facebook.airlift.json.JsonCodec;
+/*import com.facebook.airlift.json.JsonCodec;
 import com.facebook.presto.common.CatalogSchemaName;
 import com.facebook.presto.common.predicate.TupleDomain;
 import com.facebook.presto.common.type.TypeManager;
@@ -40,7 +40,7 @@ import com.google.common.collect.Iterables;
 import io.airlift.slice.Slice;
 import io.airlift.units.DataSize;
 import io.airlift.units.Duration;
-import com.facebook.presto.spi.connector.ConnectorMergeTableHandle;
+import com.facebook.presto.spi.ConnectorMergeTableHandle;
 import com.facebook.presto.spi.connector.ConnectorMetadata;
 import com.facebook.presto.spi.connector.ConnectorOutputMetadata;
 import com.facebook.presto.spi.connector.ConnectorPartitioningHandle;
@@ -155,7 +155,7 @@ import static org.apache.iceberg.SnapshotSummary.REMOVED_POS_DELETES_PROP;
 import static org.apache.iceberg.TableProperties.DELETE_ISOLATION_LEVEL;
 import static org.apache.iceberg.TableProperties.DELETE_ISOLATION_LEVEL_DEFAULT;
 import static org.apache.iceberg.TableProperties.FORMAT_VERSION;
-import static org.apache.iceberg.TableProperties.WRITE_LOCATION_PROVIDER_IMPL;
+import static org.apache.iceberg.TableProperties.WRITE_LOCATION_PROVIDER_IMPL;*/
 
 // TODO: pendiente de implementar.
 public class IcebergMetadata {}

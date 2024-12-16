@@ -38,11 +38,13 @@ import com.facebook.presto.spi.SchemaTablePrefix;
 import com.facebook.presto.spi.SystemTable;
 import com.facebook.presto.spi.TableLayoutFilterCoverage;
 import com.facebook.presto.spi.classloader.ThreadContextClassLoader;
+import com.facebook.presto.spi.ConnectorMergeTableHandle;
 import com.facebook.presto.spi.connector.ConnectorMetadata;
 import com.facebook.presto.spi.connector.ConnectorOutputMetadata;
 import com.facebook.presto.spi.connector.ConnectorPartitioningHandle;
 import com.facebook.presto.spi.connector.ConnectorPartitioningMetadata;
 import com.facebook.presto.spi.connector.ConnectorTableVersion;
+import com.facebook.presto.spi.connector.RowChangeParadigm;
 import com.facebook.presto.spi.constraints.TableConstraint;
 import com.facebook.presto.spi.security.GrantInfo;
 import com.facebook.presto.spi.security.PrestoPrincipal;
@@ -582,6 +584,48 @@ public class ClassLoaderSafeConnectorMetadata
     {
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
             return delegate.getUpdateRowIdColumnHandle(session, tableHandle, updatedColumns);
+        }
+    }
+
+    @Override
+    public RowChangeParadigm getRowChangeParadigm(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
+            return delegate.getRowChangeParadigm(session, tableHandle);
+        }
+    }
+
+    /**
+     * Get the column handle that will generate row IDs for the merge operation.
+     * These IDs will be passed to the {@link com.facebook.presto.spi.ConnectorMergeSink#storeMergedRows}
+     * method of the {@link com.facebook.presto.spi.ConnectorMergeSink} that created them.
+     */
+    public ColumnHandle getMergeRowIdColumnHandle(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
+            return delegate.getMergeRowIdColumnHandle(session, tableHandle/*, updatedColumns*/); // TODO: Revisar si es necesario pasarle algún parámetro adicional.
+        }
+    }
+
+    @Override
+    public Optional<ConnectorPartitioningHandle> getUpdateLayout(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        return delegate.getUpdateLayout(session, tableHandle);
+    }
+
+    @Override
+    public ConnectorMergeTableHandle beginMerge(ConnectorSession session, ConnectorTableHandle tableHandle/*, RetryMode retryMode*/)
+    {
+        try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
+            return delegate.beginMerge(session, tableHandle/*, retryMode*/);
+        }
+    }
+
+    @Override
+    public void finishMerge(ConnectorSession session, ConnectorMergeTableHandle mergeTableHandle, Collection<Slice> fragments, Collection<ComputedStatistics> computedStatistics)
+    {
+        try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
+            delegate.finishMerge(session, mergeTableHandle, fragments, computedStatistics);
         }
     }
 

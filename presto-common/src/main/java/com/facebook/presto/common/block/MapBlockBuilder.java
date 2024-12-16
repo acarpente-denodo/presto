@@ -27,6 +27,8 @@ import java.util.Optional;
 import java.util.function.ObjLongConsumer;
 
 import static com.facebook.presto.common.block.BlockUtil.calculateBlockResetSize;
+import static com.facebook.presto.common.block.BlockUtil.copyIsNullAndAppendNull;
+import static com.facebook.presto.common.block.BlockUtil.copyOffsetsAndAppendNull;
 import static com.facebook.presto.common.block.MapBlock.createMapBlockInternal;
 import static io.airlift.slice.SizeOf.sizeOf;
 import static java.lang.Math.max;
@@ -632,5 +634,21 @@ public class MapBlockBuilder
         if (!assertion) {
             throw new AssertionError(message);
         }
+    }
+
+    @Override
+    public Block copyWithAppendedNull()
+    {
+        boolean[] newMapIsNull = copyIsNullAndAppendNull(getMapIsNull(), getOffsetBase(), getPositionCount());
+        int[] newOffsets = copyOffsetsAndAppendNull(getOffsets(), getOffsetBase(), getPositionCount());
+
+        return createMapBlockInternal(
+                getOffsetBase(),
+                getPositionCount() + 1,
+                Optional.of(newMapIsNull),
+                newOffsets,
+                getRawKeyBlock(),
+                getRawValueBlock(),
+                getHashTables());
     }
 }

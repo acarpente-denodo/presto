@@ -15,6 +15,7 @@ package com.facebook.presto.iceberg;
 
 import com.facebook.airlift.log.Logger;
 import com.facebook.presto.common.GenericInternalException;
+import com.facebook.presto.common.Subfield;
 import com.facebook.presto.common.predicate.Domain;
 import com.facebook.presto.common.predicate.NullableValue;
 import com.facebook.presto.common.predicate.TupleDomain;
@@ -124,6 +125,7 @@ import static com.facebook.presto.hive.metastore.MetastoreUtil.PRESTO_VERSION_NA
 import static com.facebook.presto.hive.metastore.MetastoreUtil.PRESTO_VIEW_COMMENT;
 import static com.facebook.presto.hive.metastore.MetastoreUtil.PRESTO_VIEW_FLAG;
 import static com.facebook.presto.hive.metastore.MetastoreUtil.TABLE_COMMENT;
+import static com.facebook.presto.iceberg.ColumnIdentity.createColumnIdentity;
 import static com.facebook.presto.iceberg.ExpressionConverter.toIcebergExpression;
 import static com.facebook.presto.iceberg.FileContent.POSITION_DELETES;
 import static com.facebook.presto.iceberg.FileContent.fromIcebergFileContent;
@@ -328,6 +330,21 @@ public final class IcebergUtil
         return schema.columns().stream()
                 .map(column -> partitionFieldNames.contains(column.name()) ? IcebergColumnHandle.create(column, typeManager, PARTITION_KEY) : IcebergColumnHandle.create(column, typeManager, REGULAR))
                 .collect(toImmutableList());
+    }
+
+    public static IcebergColumnHandle getColumnHandle(NestedField column, TypeManager typeManager)
+    {
+        return createColumnHandle(column, column, typeManager, ImmutableList.of());
+    }
+
+    private static IcebergColumnHandle createColumnHandle(NestedField baseColumn, NestedField childColumn, TypeManager typeManager, List<Subfield> subfields)
+    {
+        return new IcebergColumnHandle(
+                createColumnIdentity(baseColumn),
+                toPrestoType(baseColumn.type(), typeManager),
+                Optional.ofNullable(childColumn.doc()),
+                REGULAR,
+                subfields);
     }
 
     public static Map<PartitionField, Integer> getIdentityPartitions(PartitionSpec partitionSpec)

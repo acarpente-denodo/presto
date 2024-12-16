@@ -59,6 +59,8 @@ import com.facebook.presto.sql.planner.plan.IndexJoinNode;
 import com.facebook.presto.sql.planner.plan.IndexSourceNode;
 import com.facebook.presto.sql.planner.plan.JoinNode;
 import com.facebook.presto.sql.planner.plan.LateralJoinNode;
+import com.facebook.presto.sql.planner.plan.MergeProcessorNode;
+import com.facebook.presto.sql.planner.plan.MergeWriterNode;
 import com.facebook.presto.sql.planner.plan.OffsetNode;
 import com.facebook.presto.sql.planner.plan.RemoteSourceNode;
 import com.facebook.presto.sql.planner.plan.RowNumberNode;
@@ -447,6 +449,22 @@ public class UnaliasSymbolReferences
         public PlanNode visitDelete(DeleteNode node, RewriteContext<Void> context)
         {
             return new DeleteNode(node.getSourceLocation(), node.getId(), context.rewrite(node.getSource()), canonicalize(node.getRowId()), node.getOutputVariables());
+        }
+
+        @Override
+        public PlanNode visitMergeWriter(MergeWriterNode node, RewriteContext<Void> context)
+        {
+            PlanNode source = context.rewrite(node.getSource());
+            SymbolMapper mapper = new SymbolMapper(mapping, types, warningCollector);
+            return mapper.map(node, source);
+        }
+
+        @Override
+        public PlanNode visitMergeProcessor(MergeProcessorNode node, RewriteContext<Void> context)
+        {
+            PlanNode source = context.rewrite(node.getSource());
+            SymbolMapper mapper = new SymbolMapper(mapping, types, warningCollector);
+            return mapper.map(node, source);
         }
 
         @Override

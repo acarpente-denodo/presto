@@ -247,6 +247,12 @@ public class SingleRowBlockWriter
     }
 
     @Override
+    public Block copyWithAppendedNull()
+    {
+        throw new UnsupportedOperationException("SingleRowBlockWriter does not support newBlockWithAppendedNull()");
+    }
+
+    @Override
     public String toString()
     {
         if (!fieldBlockBuilderReturned) {

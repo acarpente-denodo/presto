@@ -15,7 +15,7 @@ package com.facebook.presto.spi;
 
 import com.facebook.presto.spi.connector.ConnectorMetadata;
 
-public interface ConnectorMergeHandle
+public interface ConnectorMergeTableHandle
 {
     /**
      * This method is required because the {@link ConnectorTableHandle} returned by

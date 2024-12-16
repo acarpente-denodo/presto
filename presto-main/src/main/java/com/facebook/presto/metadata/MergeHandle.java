@@ -13,7 +13,7 @@
  */
 package com.facebook.presto.metadata;
 
-import com.facebook.presto.spi.ConnectorMergeHandle;
+import com.facebook.presto.spi.ConnectorMergeTableHandle;
 import com.facebook.presto.spi.TableHandle;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -25,15 +25,15 @@ import static java.util.Objects.requireNonNull;
 public final class MergeHandle
 {
     private final TableHandle tableHandle;
-    private final ConnectorMergeHandle connectorMergeHandle;
+    private final ConnectorMergeTableHandle connectorMergeTableHandle;
 
     @JsonCreator
     public MergeHandle(
             @JsonProperty("tableHandle") TableHandle tableHandle,
-            @JsonProperty("connectorMergeHandle") ConnectorMergeHandle connectorMergeHandle)
+            @JsonProperty("connectorMergeTableHandle") ConnectorMergeTableHandle connectorMergeTableHandle)
     {
         this.tableHandle = requireNonNull(tableHandle, "tableHandle is null");
-        this.connectorMergeHandle = requireNonNull(connectorMergeHandle, "connectorMergeHandle is null");
+        this.connectorMergeTableHandle = requireNonNull(connectorMergeTableHandle, "connectorMergeTableHandle is null");
     }
 
     @JsonProperty
@@ -43,15 +43,15 @@ public final class MergeHandle
     }
 
     @JsonProperty
-    public ConnectorMergeHandle getConnectorMergeHandle()
+    public ConnectorMergeTableHandle getConnectorMergeHandle()
     {
-        return connectorMergeHandle;
+        return connectorMergeTableHandle;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(tableHandle, connectorMergeHandle);
+        return Objects.hash(tableHandle, connectorMergeTableHandle);
     }
 
     @Override
@@ -65,12 +65,12 @@ public final class MergeHandle
         }
         MergeHandle o = (MergeHandle) obj;
         return Objects.equals(this.tableHandle, o.tableHandle) &&
-                Objects.equals(this.connectorMergeHandle, o.connectorMergeHandle);
+                Objects.equals(this.connectorMergeTableHandle, o.connectorMergeTableHandle);
     }
 
     @Override
     public String toString()
     {
-        return tableHandle + ":" + connectorMergeHandle;
+        return tableHandle + ":" + connectorMergeTableHandle;
     }
 }

@@ -430,6 +430,31 @@ public class RunLengthEncodedBlock
     }
 
     @Override
+    public Block copyWithAppendedNull()
+    {
+        if (value.isNull(0)) {
+            return new RunLengthEncodedBlock(value, positionCount + 1);
+        }
+
+        Block dictionary = value.copyWithAppendedNull();
+        int[] ids = new int[positionCount + 1];
+        ids[positionCount] = 1;
+        return new DictionaryBlock(ids.length, dictionary, ids);
+    }
+
+    @Override
+    public Block getUnderlyingValueBlock()
+    {
+        return value.getUnderlyingValueBlock();
+    }
+
+    @Override
+    public int getUnderlyingValuePosition(int position)
+    {
+        return value.getUnderlyingValuePosition(0);
+    }
+
+    @Override
     public boolean equals(Object obj)
     {
         if (this == obj) {

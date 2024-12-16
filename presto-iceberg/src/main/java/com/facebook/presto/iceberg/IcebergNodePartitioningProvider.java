@@ -12,7 +12,9 @@
  * limitations under the License.
  */
 package com.facebook.presto.iceberg;
+/*
 
+import com.facebook.presto.spi.connector.ConnectorNodePartitioningProvider;
 import io.trino.spi.connector.BucketFunction;
 import io.trino.spi.connector.ConnectorNodePartitioningProvider;
 import io.trino.spi.connector.ConnectorPartitioningHandle;
@@ -27,12 +29,15 @@ import javax.inject.Inject;
 
 import java.util.List;
 
+import static com.facebook.presto.iceberg.IcebergUtil.schemaFromHandles;
+import static com.facebook.presto.iceberg.PartitionFields.parsePartitionFields;
 import static io.trino.plugin.iceberg.IcebergUtil.schemaFromHandles;
 import static io.trino.plugin.iceberg.PartitionFields.parsePartitionFields;
 import static java.util.Objects.requireNonNull;
+*/
 
-public class IcebergNodePartitioningProvider
-        implements ConnectorNodePartitioningProvider
+public class IcebergNodePartitioningProvider {}
+/*        implements ConnectorNodePartitioningProvider
 {
     private final TypeOperators typeOperators;
 
@@ -62,4 +67,4 @@ public class IcebergNodePartitioningProvider
                 handle.getPartitioningColumns(),
                 bucketCount);
     }
-}
+}*/

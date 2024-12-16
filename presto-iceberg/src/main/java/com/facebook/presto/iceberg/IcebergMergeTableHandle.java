@@ -13,7 +13,7 @@
  */
 package com.facebook.presto.iceberg;
 
-import com.facebook.presto.spi.connector.ConnectorMergeTableHandle;
+import com.facebook.presto.spi.ConnectorMergeTableHandle;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 

@@ -41,6 +41,11 @@ public interface ConnectorHandleResolver
         throw new UnsupportedOperationException();
     }
 
+    default Class<? extends ConnectorMergeTableHandle> getMergetHandleClass()
+    {
+        throw new UnsupportedOperationException();
+    }
+
     default Class<? extends ConnectorPartitioningHandle> getPartitioningHandleClass()
     {
         throw new UnsupportedOperationException();

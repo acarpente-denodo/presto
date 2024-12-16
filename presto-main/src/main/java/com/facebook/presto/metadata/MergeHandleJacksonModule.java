@@ -13,17 +13,17 @@
  */
 package com.facebook.presto.metadata;
 
-import com.facebook.presto.spi.ConnectorMergeHandle;
+import com.facebook.presto.spi.ConnectorMergeTableHandle;
 
 import javax.inject.Inject;
 
 public class MergeHandleJacksonModule
-        extends AbstractTypedJacksonModule<ConnectorMergeHandle>
+        extends AbstractTypedJacksonModule<ConnectorMergeTableHandle>
 {
     @Inject
     public MergeHandleJacksonModule(HandleResolver handleResolver)
     {
-        super(ConnectorMergeHandle.class,
+        super(ConnectorMergeTableHandle.class,
                 handleResolver::getId,
                 handleResolver::getMergeHandleClass);
     }

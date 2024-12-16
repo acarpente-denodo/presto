@@ -40,11 +40,16 @@ public class MergeWriterOperator
         private final PageSinkManager pageSinkManager;
         private final MergeTarget target;
         private final Session session;
+        private final JsonCodec<TableCommitContext> tableCommitContextCodec;
         private boolean closed;
 
-        private final JsonCodec<TableCommitContext> tableCommitContextCodec;
-
-        public MergeWriterOperatorFactory(int operatorId, PlanNodeId planNodeId, PageSinkManager pageSinkManager, MergeTarget target, Session session, JsonCodec<TableCommitContext> tableCommitContextCodec)
+        public MergeWriterOperatorFactory(
+                int operatorId,
+                PlanNodeId planNodeId,
+                PageSinkManager pageSinkManager,
+                MergeTarget target,
+                Session session,
+                JsonCodec<TableCommitContext> tableCommitContextCodec)
         {
             this.operatorId = operatorId;
             this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");

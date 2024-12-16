@@ -51,6 +51,7 @@ import com.facebook.presto.spi.connector.ConnectorOutputMetadata;
 import com.facebook.presto.spi.connector.ConnectorTableVersion;
 import com.facebook.presto.spi.connector.ConnectorTableVersion.VersionOperator;
 import com.facebook.presto.spi.connector.ConnectorTableVersion.VersionType;
+import com.facebook.presto.spi.connector.RowChangeParadigm;
 import com.facebook.presto.spi.function.StandardFunctionResolution;
 import com.facebook.presto.spi.plan.FilterStatsCalculatorService;
 import com.facebook.presto.spi.relation.RowExpression;
@@ -161,6 +162,7 @@ import static com.facebook.presto.iceberg.optimizer.IcebergPlanOptimizer.getEnfo
 import static com.facebook.presto.iceberg.util.StatisticsUtil.calculateBaseTableStatistics;
 import static com.facebook.presto.iceberg.util.StatisticsUtil.calculateStatisticsConsideringLayout;
 import static com.facebook.presto.spi.StandardErrorCode.NOT_SUPPORTED;
+import static com.facebook.presto.spi.connector.RowChangeParadigm.DELETE_ROW_AND_INSERT_ROW;
 import static com.facebook.presto.spi.statistics.TableStatisticType.ROW_COUNT;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -521,6 +523,33 @@ public abstract class IcebergAbstractMetadata
     public ColumnHandle getDeleteRowIdColumnHandle(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
         return IcebergColumnHandle.create(ROW_POSITION, typeManager, IcebergColumnHandle.ColumnType.REGULAR);
+    }
+
+    /**
+     * Return the row change paradigm supported by the connector on the table.
+     */
+    @Override
+    public RowChangeParadigm getRowChangeParadigm(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        return DELETE_ROW_AND_INSERT_ROW;
+    }
+
+    @Override
+    public ColumnHandle getMergeRowIdColumnHandle(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        return IcebergColumnHandle.create(ROW_POSITION, typeManager, IcebergColumnHandle.ColumnType.REGULAR);
+
+        // TODO: codigo trino
+        //         StructType type = StructType.of(ImmutableList.<NestedField>builder()
+        //                .add(MetadataColumns.FILE_PATH)
+        //                .add(MetadataColumns.ROW_POSITION)
+        //                .add(NestedField.required(TRINO_MERGE_FILE_RECORD_COUNT, "file_record_count", LongType.get()))
+        //                .add(NestedField.required(TRINO_MERGE_PARTITION_SPEC_ID, "partition_spec_id", IntegerType.get()))
+        //                .add(NestedField.required(TRINO_MERGE_PARTITION_DATA, "partition_data", StringType.get()))
+        //                .build());
+        //
+        //        NestedField field = NestedField.required(TRINO_MERGE_ROW_ID, TRINO_ROW_ID_NAME, type);
+        //        return getColumnHandle(field, typeManager);
     }
 
     @Override

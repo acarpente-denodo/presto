@@ -38,8 +38,8 @@ import static com.facebook.presto.iceberg.IcebergUtil.getLocationProvider;
 import static com.facebook.presto.iceberg.IcebergUtil.getShallowWrappedIcebergTable;
 import static com.facebook.presto.iceberg.PartitionSpecConverter.toIcebergPartitionSpec;
 import static com.facebook.presto.iceberg.SchemaConverter.toIcebergSchema;
+import static com.google.common.collect.Maps.transformValues;
 import static java.util.Objects.requireNonNull;
-
 public class IcebergPageSinkProvider
         implements ConnectorPageSinkProvider
 {
@@ -81,7 +81,8 @@ public class IcebergPageSinkProvider
     {
         HdfsContext hdfsContext = new HdfsContext(session, tableHandle.getSchemaName(), tableHandle.getTableName().getTableName());
         Schema schema = toIcebergSchema(tableHandle.getSchema());
-        PartitionSpec partitionSpec = toIcebergPartitionSpec(tableHandle.getPartitionSpec()).toUnbound().bind(schema);
+        PrestoIcebergPartitionSpec tablePartitionSpec = tableHandle.getPartitionSpec();
+        PartitionSpec partitionSpec = toIcebergPartitionSpec(tablePartitionSpec).toUnbound().bind(schema);
         LocationProvider locationProvider = getLocationProvider(new SchemaTableName(tableHandle.getSchemaName(), tableHandle.getTableName().getTableName()),
                 tableHandle.getOutputPath(), tableHandle.getStorageProperties());
         Table table = getShallowWrappedIcebergTable(schema, partitionSpec, tableHandle.getStorageProperties(), Optional.empty());
@@ -98,4 +99,30 @@ public class IcebergPageSinkProvider
                 tableHandle.getFileFormat(),
                 maxOpenPartitions);
     }
+
+    // TODO: pendiente de implementar.
+//    @Override
+//    public ConnectorMergeSink createMergeSink(ConnectorTransactionHandle transactionHandle, ConnectorSession session, ConnectorMergeTableHandle mergeHandle)
+//    {
+//        IcebergMergeTableHandle merge = (IcebergMergeTableHandle) mergeHandle;
+//        IcebergWritableTableHandle tableHandle = merge.getInsertTableHandle();
+//        LocationProvider locationProvider = getLocationProvider(tableHandle.getName(), tableHandle.getOutputPath(), tableHandle.getStorageProperties());
+//        Schema schema = SchemaParser.fromJson(tableHandle.getSchemaAsJson());
+//        Map<Integer, PartitionSpec> partitionsSpecs = transformValues(tableHandle.getPartitionsSpecsAsJson(), json -> PartitionSpecParser.fromJson(schema, json));
+//        ConnectorPageSink pageSink = createPageSink(session, tableHandle);
+//
+//        return new IcebergMergeSink(
+//                locationProvider,
+//                fileWriterFactory,
+//                hdfsEnvironment,
+////                fileIoProvider,
+//                jsonCodec,
+//                session,
+//                tableHandle.getFileFormat(),
+//                tableHandle.getStorageProperties(),
+//                schema,
+//                partitionsSpecs,
+//                pageSink,
+//                tableHandle.getInputColumns().size());
+//    }
 }

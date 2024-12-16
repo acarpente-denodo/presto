@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 package com.facebook.presto.iceberg;
-
+/*
 import com.facebook.presto.common.Page;
 import com.facebook.presto.common.block.Block;
 import com.facebook.presto.common.block.ColumnarRow;
@@ -46,9 +46,10 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Throwables.throwIfInstanceOf;
 import static com.google.common.base.Verify.verify;
 import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNull;*/
 
-public class IcebergPageSource
+public class IcebergPageSource {}
+/*
         implements UpdatablePageSource
 {
     private final Schema schema;
@@ -175,12 +176,14 @@ public class IcebergPageSource
         }
     }
 
-    /**
+    */
+/**
      * The $row_id column used for updates is a composite column of at least one other column in the Page.
      * The indexes of the columns needed for the $row_id are in the updateRowIdChildColumnIndexes array.
      * @param page The raw Page from the Parquet/ORC reader.
      * @return A Page where the $row_id channel has been populated.
-     */
+     *//*
+
     private Page withRowIdBlock(Page page)
     {
         if (rowIdColumnIndex == -1) {
@@ -325,3 +328,4 @@ public class IcebergPageSource
         return fieldIdsToIndex.buildOrThrow();
     }
 }
+*/
