@@ -1,0 +1,309 @@
+@startuml
+class NestedLoopJoinOperator {
+- ListenableFuture<NestedLoopJoinPages> nestedLoopJoinPagesFuture
+- OperatorContext operatorContext
+- Runnable afterClose
+- List<Page> buildPages
+- Page probePage
+- Iterator<Page> buildPageIterator
+- NestedLoopOutputIterator nestedLoopOutputIterator
+- boolean finishing
+- boolean closed
++ OperatorContext getOperatorContext()
++ void finish()
++ boolean isFinished()
++ ListenableFuture<?> isBlocked()
++ boolean needsInput()
++ void addInput(Page)
++ Page getOutput()
++ void close()
+~ {static} NestedLoopOutputIterator createNestedLoopOutputIterator(Page,Page)
+}
+
+
+class NestedLoopJoinOperator$NestedLoopJoinOperatorFactory {
+- int operatorId
+- PlanNodeId planNodeId
+- JoinBridgeManager<NestedLoopJoinBridge> joinBridgeManager
+- boolean closed
++ Operator createOperator(DriverContext)
++ void noMoreOperators()
++ void noMoreOperators(Lifespan)
++ OperatorFactory duplicate()
+}
+
+
+abstract class NestedLoopJoinOperator$NestedLoopOutputIterator {
++ {abstract}boolean hasNext()
++ {abstract}Page next()
+}
+
+class NestedLoopJoinOperator$PageRepeatingIterator {
+- Page page
+- int remainingCount
++ boolean hasNext()
++ Page next()
+}
+
+
+class NestedLoopJoinOperator$NestedLoopPageBuilder {
+- Block[] resultBlockBuffer
+- Page smallPage
+- int indexForRleBlocks
+- int largePagePositionCount
+- int maxRowIndex
+- int rowIndex
++ boolean hasNext()
++ Page next()
+}
+
+
+class LookupJoinOperator {
+- OperatorContext operatorContext
+- List<Type> probeTypes
+- JoinProbeFactory joinProbeFactory
+- Runnable afterClose
+- OptionalInt lookupJoinsCount
+- HashGenerator hashGenerator
+- LookupSourceFactory lookupSourceFactory
+- PartitioningSpillerFactory partitioningSpillerFactory
+- JoinStatisticsCounter statisticsCounter
+- LookupJoinPageBuilder pageBuilder
+- boolean probeOnOuterSide
+- ListenableFuture<LookupSourceProvider> lookupSourceProviderFuture
+- LookupSourceProvider lookupSourceProvider
+- JoinProbe probe
+- Page outputPage
+- Optional<PartitioningSpiller> spiller
+- Optional<LocalPartitionGenerator> partitionGenerator
+- ListenableFuture<?> spillInProgress
+- long inputPageSpillEpoch
+- boolean closed
+- boolean finishing
+- boolean unspilling
+- boolean finished
+- long joinPosition
+- int joinSourcePositions
+- boolean currentProbePositionProducedRow
+- Map<Integer,SavedRow> savedRows
+- ListenableFuture<PartitionedConsumption<Supplier<LookupSource>>> partitionedConsumption
+- Iterator<Partition<Supplier<LookupSource>>> lookupPartitions
+- Optional<Partition<Supplier<LookupSource>>> currentPartition
+- Optional<ListenableFuture<Supplier<LookupSource>>> unspilledLookupSource
+- Iterator<Page> unspilledInputPages
+- boolean optimizeProbeForEmptyBuild
+- long nullProbeRowCount
+- long inputProbeRowCount
++ OperatorContext getOperatorContext()
++ void finish()
++ boolean isFinished()
++ ListenableFuture<?> isBlocked()
++ boolean needsInput()
++ void addInput(Page)
+- void addInput(Page,SpillInfoSnapshot)
+- boolean tryFetchLookupSourceProvider()
+- Page spillAndMaskSpilledPositions(Page,IntPredicate)
++ LocalPartitionGenerator getPartitionGenerator()
++ Page getOutput()
+- void tryUnspillNext()
+- void processProbe()
+- void processProbe(LookupSource)
+- void restoreProbe(Page,long,boolean,int,SpillInfoSnapshot)
+- Page pageTail(Page,int)
++ void close()
+- boolean joinCurrentPosition(LookupSource,DriverYieldSignal)
+- boolean advanceProbePosition(LookupSource)
+- boolean outerJoinCurrentPosition()
+- boolean tryBuildPage()
+- void buildPage()
+- void clearProbe()
+}
+
+
+class LookupJoinOperator$SpillInfoSnapshot {
+- boolean hasSpilled
+- long spillEpoch
+- IntPredicate spillMask
++ {static} SpillInfoSnapshot from(LookupSourceLease)
++ {static} SpillInfoSnapshot noSpill()
++ boolean hasSpilled()
++ long getSpillEpoch()
++ IntPredicate getSpillMask()
+}
+
+
+class LookupJoinOperator$SavedRow {
++ Page row
++ long joinPositionWithinPartition
++ boolean currentProbePositionProducedRow
++ int joinSourcePositions
+}
+
+class MergeWriterOperator {
+- ConnectorMergeSink mergeSink
++ void addInput(Page)
++ void finish()
+# void abort()
+}
+
+
+class MergeWriterOperator$MergeWriterOperatorFactory {
+- int operatorId
+- PlanNodeId planNodeId
+- PageSinkManager pageSinkManager
+- MergeTarget target
+- Session session
+- JsonCodec<TableCommitContext> tableCommitContextCodec
+- boolean closed
++ Operator createOperator(DriverContext)
++ void noMoreOperators()
++ OperatorFactory duplicate()
+}
+
+
+class MarkDistinctOperator {
+- OperatorContext operatorContext
+- MarkDistinctHash markDistinctHash
+- LocalMemoryContext localUserMemoryContext
+- Page inputPage
+- boolean finishing
+- Work<Block> unfinishedWork
++ OperatorContext getOperatorContext()
++ void finish()
++ boolean isFinished()
++ boolean needsInput()
++ void addInput(Page)
++ Page getOutput()
+- boolean hasUnfinishedInput()
+- boolean updateMemoryReservation()
++ int getCapacity()
+}
+
+
+class MarkDistinctOperator$MarkDistinctOperatorFactory {
+- int operatorId
+- PlanNodeId planNodeId
+- Optional<Integer> hashChannel
+- List<Integer> markDistinctChannels
+- List<Type> types
+- JoinCompiler joinCompiler
+- boolean closed
++ Operator createOperator(DriverContext)
++ void noMoreOperators()
++ OperatorFactory duplicate()
+}
+
+
+class AssignUniqueIdOperator {
+- {static} long ROW_IDS_PER_REQUEST
+- {static} long MAX_ROW_ID
+- OperatorContext operatorContext
+- boolean finishing
+- AtomicLong rowIdPool
+- long uniqueValueMask
+- Page inputPage
+- long rowIdCounter
+- long maxRowIdCounterValue
+- void requestValues()
++ OperatorContext getOperatorContext()
++ void finish()
++ boolean isFinished()
++ boolean needsInput()
++ void addInput(Page)
++ Page getOutput()
+- Page processPage()
+- Block generateIdColumn()
+}
+
+
+class AssignUniqueIdOperator$AssignUniqueIdOperatorFactory {
+- int operatorId
+- PlanNodeId planNodeId
+- boolean closed
+- AtomicLong valuePool
++ Operator createOperator(DriverContext)
++ void noMoreOperators()
++ OperatorFactory duplicate()
+}
+
+
+class AggregationOperator {
+- OperatorContext operatorContext
+- LocalMemoryContext systemMemoryContext
+- LocalMemoryContext userMemoryContext
+- List<Aggregator> aggregates
+- boolean useSystemMemory
+- State state
++ OperatorContext getOperatorContext()
++ void finish()
++ void close()
++ boolean isFinished()
++ boolean needsInput()
++ void addInput(Page)
++ Page getOutput()
+- boolean updateMemory()
+}
+
+
+class AggregationOperator$AggregationOperatorFactory {
+- int operatorId
+- PlanNodeId planNodeId
+- Step step
+- List<AccumulatorFactory> accumulatorFactories
+- boolean useSystemMemory
+- boolean closed
++ Operator createOperator(DriverContext)
++ void noMoreOperators()
++ OperatorFactory duplicate()
+}
+
+
+enum State {
++  NEEDS_INPUT
++  HAS_OUTPUT
++  FINISHED
+}
+
+interface Operator {
+~ {static} ListenableFuture<?> NOT_BLOCKED
+~ OperatorContext getOperatorContext()
+~ ListenableFuture<?> isBlocked()
+~ boolean needsInput()
+~ void addInput(Page)
+~ Page getOutput()
+~ ListenableFuture<?> startMemoryRevoke()
+~ void finishMemoryRevoke()
+~ void finish()
+~ boolean isFinished()
+~ void close()
+}
+
+
+
+
+Operator <|.. NestedLoopJoinOperator
+Closeable <|.. NestedLoopJoinOperator
+NestedLoopJoinOperator +.. NestedLoopJoinOperator$NestedLoopJoinOperatorFactory
+OperatorFactory <|.. NestedLoopJoinOperator$NestedLoopJoinOperatorFactory
+NestedLoopJoinOperator +.. NestedLoopJoinOperator$NestedLoopOutputIterator
+NestedLoopJoinOperator +.. NestedLoopJoinOperator$PageRepeatingIterator
+NestedLoopOutputIterator <|-- NestedLoopJoinOperator$PageRepeatingIterator
+NestedLoopJoinOperator +.. NestedLoopJoinOperator$NestedLoopPageBuilder
+NestedLoopOutputIterator <|-- NestedLoopJoinOperator$NestedLoopPageBuilder
+Operator <|.. LookupJoinOperator
+LookupJoinOperator +.. LookupJoinOperator$SpillInfoSnapshot
+LookupJoinOperator +.. LookupJoinOperator$SavedRow
+AbstractRowChangeOperator <|-- MergeWriterOperator
+Operator <|.. AbstractRowChangeOperator
+MergeWriterOperator +.. MergeWriterOperator$MergeWriterOperatorFactory
+OperatorFactory <|.. MergeWriterOperator$MergeWriterOperatorFactory
+Operator <|.. MarkDistinctOperator
+MarkDistinctOperator +.. MarkDistinctOperator$MarkDistinctOperatorFactory
+OperatorFactory <|.. MarkDistinctOperator$MarkDistinctOperatorFactory
+Operator <|.. AssignUniqueIdOperator
+AssignUniqueIdOperator +.. AssignUniqueIdOperator$AssignUniqueIdOperatorFactory
+OperatorFactory <|.. AssignUniqueIdOperator$AssignUniqueIdOperatorFactory
+Operator <|.. AggregationOperator
+AggregationOperator +.. AggregationOperator$AggregationOperatorFactory
+OperatorFactory <|.. AggregationOperator$AggregationOperatorFactory
+@enduml

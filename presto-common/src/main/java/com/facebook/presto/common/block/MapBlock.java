@@ -24,6 +24,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.ObjLongConsumer;
 
+import static com.facebook.presto.common.block.BlockUtil.copyIsNullAndAppendNull;
+import static com.facebook.presto.common.block.BlockUtil.copyOffsetsAndAppendNull;
 import static io.airlift.slice.SizeOf.sizeOf;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -304,6 +306,22 @@ public class MapBlock
                 hashTables.loadHashTables(hashTables.getExpectedHashTableCount(), offsets, mapIsNull, getRawKeyBlock(), keyBlockHashCode);
             }
         }
+    }
+
+    @Override
+    public MapBlock copyWithAppendedNull()
+    {
+        boolean[] newMapIsNull = copyIsNullAndAppendNull(mapIsNull, startOffset, getPositionCount());
+        int[] newOffsets = copyOffsetsAndAppendNull(offsets, startOffset, getPositionCount());
+
+        return createMapBlockInternal(
+                startOffset,
+                getPositionCount() + 1,
+                Optional.of(newMapIsNull),
+                newOffsets,
+                keyBlock,
+                valueBlock,
+                hashTables);
     }
 
     @Override

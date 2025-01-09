@@ -33,6 +33,7 @@ import static com.facebook.presto.common.block.BlockUtil.appendNullToIsNullArray
 import static com.facebook.presto.common.block.BlockUtil.checkArrayRange;
 import static com.facebook.presto.common.block.BlockUtil.checkValidRegion;
 import static com.facebook.presto.common.block.BlockUtil.compactArray;
+import static com.facebook.presto.common.block.BlockUtil.copyIsNullAndAppendNull;
 import static com.facebook.presto.common.block.BlockUtil.getNum128Integers;
 import static com.facebook.presto.common.block.BlockUtil.internalPositionInRange;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
@@ -367,6 +368,26 @@ public class Int128ArrayBlock
         boolean[] newValueIsNull = appendNullToIsNullArray(valueIsNull, positionOffset, positionCount);
         long[] newValues = ensureCapacity(values, (positionOffset + positionCount + 1) * 2, SMALL, PRESERVE);
         return new Int128ArrayBlock(positionOffset, positionCount + 1, newValueIsNull, newValues);
+    }
+
+    @Override
+    public Int128ArrayBlock getUnderlyingValueBlock()
+    {
+        return this;
+    }
+
+    @Override
+    public Int128ArrayBlock copyWithAppendedNull()
+    {
+        boolean[] newValueIsNull = copyIsNullAndAppendNull(valueIsNull, positionOffset, positionCount);
+        long[] newValues = ensureCapacity(values, (positionOffset + positionCount + 1) * 2);
+        return new Int128ArrayBlock(positionOffset, positionCount + 1, newValueIsNull, newValues);
+    }
+
+    @Override
+    public int getUnderlyingValuePosition(int position)
+    {
+        return position;
     }
 
     @Override

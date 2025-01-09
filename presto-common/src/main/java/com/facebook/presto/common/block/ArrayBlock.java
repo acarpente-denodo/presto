@@ -22,6 +22,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.ObjLongConsumer;
 
+import static com.facebook.presto.common.block.BlockUtil.copyIsNullAndAppendNull;
+import static com.facebook.presto.common.block.BlockUtil.copyOffsetsAndAppendNull;
 import static io.airlift.slice.SizeOf.sizeOf;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -241,6 +243,32 @@ public class ArrayBlock
         }
 
         return getSingleValueBlockInternal(position);
+    }
+
+    @Override
+    public ArrayBlock copyWithAppendedNull()
+    {
+        boolean[] newValueIsNull = copyIsNullAndAppendNull(valueIsNull, arrayOffset, getPositionCount());
+        int[] newOffsets = copyOffsetsAndAppendNull(offsets, arrayOffset, getPositionCount());
+
+        return createArrayBlockInternal(
+                arrayOffset,
+                getPositionCount() + 1,
+                newValueIsNull,
+                newOffsets,
+                values);
+    }
+
+    @Override
+    public Block getUnderlyingValueBlock()
+    {
+        return this;
+    }
+
+    @Override
+    public int getUnderlyingValuePosition(int position)
+    {
+        return position;
     }
 
     @Override

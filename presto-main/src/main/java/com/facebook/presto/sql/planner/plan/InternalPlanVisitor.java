@@ -67,6 +67,18 @@ public abstract class InternalPlanVisitor<R, C>
         return visitPlan(node, context);
     }
 
+    public R visitMergeWriter(MergeWriterNode node, C context)
+    {
+        // TODO: Hay que sobreescribir este método en las subclases.
+        return visitPlan(node, context);
+    }
+
+    public R visitMergeProcessor(MergeProcessorNode node, C context)
+    {
+        // TODO: Hay que sobreescribir este método en las subclases.
+        return visitPlan(node, context);
+    }
+
     public R visitOffset(OffsetNode node, C context)
     {
         return visitPlan(node, context);

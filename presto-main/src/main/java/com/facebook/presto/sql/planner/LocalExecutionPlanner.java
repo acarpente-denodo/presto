@@ -39,6 +39,7 @@ import com.facebook.presto.execution.scheduler.ExecutionWriterTarget.DeleteHandl
 import com.facebook.presto.execution.scheduler.ExecutionWriterTarget.InsertHandle;
 import com.facebook.presto.execution.scheduler.ExecutionWriterTarget.RefreshMaterializedViewHandle;
 import com.facebook.presto.execution.scheduler.ExecutionWriterTarget.UpdateHandle;
+import com.facebook.presto.execution.scheduler.ExecutionWriterTarget.MergeHandle;
 import com.facebook.presto.execution.scheduler.TableWriteInfo;
 import com.facebook.presto.execution.scheduler.TableWriteInfo.DeleteScanInfo;
 import com.facebook.presto.expressions.DynamicFilters;
@@ -53,6 +54,8 @@ import com.facebook.presto.metadata.FunctionAndTypeManager;
 import com.facebook.presto.metadata.Metadata;
 import com.facebook.presto.operator.AggregationOperator.AggregationOperatorFactory;
 import com.facebook.presto.operator.AssignUniqueIdOperator;
+import com.facebook.presto.operator.ChangeOnlyUpdatedColumnsMergeProcessor;
+import com.facebook.presto.operator.DeleteAndInsertMergeProcessor;
 import com.facebook.presto.operator.DeleteOperator.DeleteOperatorFactory;
 import com.facebook.presto.operator.DevNullOperator.DevNullOperatorFactory;
 import com.facebook.presto.operator.DriverFactory;
@@ -74,6 +77,9 @@ import com.facebook.presto.operator.LookupJoinOperators;
 import com.facebook.presto.operator.LookupOuterOperator.LookupOuterOperatorFactory;
 import com.facebook.presto.operator.LookupSourceFactory;
 import com.facebook.presto.operator.MarkDistinctOperator.MarkDistinctOperatorFactory;
+import com.facebook.presto.operator.MergeWriterOperator;
+import com.facebook.presto.operator.MergeRowChangeProcessor;
+import com.facebook.presto.operator.MergeWriterOperator;
 import com.facebook.presto.operator.MetadataDeleteOperator.MetadataDeleteOperatorFactory;
 import com.facebook.presto.operator.NestedLoopJoinBridge;
 import com.facebook.presto.operator.NestedLoopJoinPagesSupplier;
@@ -196,6 +202,8 @@ import com.facebook.presto.sql.planner.plan.IndexJoinNode;
 import com.facebook.presto.sql.planner.plan.IndexSourceNode;
 import com.facebook.presto.sql.planner.plan.InternalPlanVisitor;
 import com.facebook.presto.sql.planner.plan.JoinNode;
+import com.facebook.presto.sql.planner.plan.MergeProcessorNode;
+import com.facebook.presto.sql.planner.plan.MergeWriterNode;
 import com.facebook.presto.sql.planner.plan.MetadataDeleteNode;
 import com.facebook.presto.sql.planner.plan.RemoteSourceNode;
 import com.facebook.presto.sql.planner.plan.RowNumberNode;
@@ -239,6 +247,7 @@ import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -2787,6 +2796,81 @@ public class LocalExecutionPlanner
         }
 
         @Override
+        public PhysicalOperation visitMergeWriter(MergeWriterNode node, LocalExecutionPlanContext context)
+        {
+            context.setDriverInstanceCount(getTaskWriterCount(session));
+
+            PhysicalOperation source = node.getSource().accept(this, context);
+            OperatorFactory operatorFactory = new MergeWriterOperator.MergeWriterOperatorFactory(
+                    context.getNextOperatorId(), node.getId(), pageSinkManager, node.getTarget(), session,
+                    tableCommitContextCodec);
+            return new PhysicalOperation(operatorFactory, makeLayout(node), context, source);
+        }
+
+        @Override
+        public PhysicalOperation visitMergeProcessor(MergeProcessorNode node, LocalExecutionPlanContext context)
+        {
+            PhysicalOperation source = node.getSource().accept(this, context);
+
+            Map<VariableReferenceExpression, Integer> nodeLayout = makeLayout(node);
+            Map<VariableReferenceExpression, Integer> sourceLayout = makeLayout(node.getSource());
+            int rowIdChannel = sourceLayout.get(node.getRowIdSymbol());
+            int mergeRowChannel = sourceLayout.get(node.getMergeRowSymbol());
+
+            List<Integer> redistributionColumns = node.getRedistributionColumnSymbols().stream()
+                    .map(nodeLayout::get)
+                    .collect(toImmutableList());
+            List<Integer> dataColumnChannels = node.getDataColumnSymbols().stream()
+                    .map(nodeLayout::get)
+                    .collect(toImmutableList());
+
+            // TODO: Ver donde hay que meter el siguiente código.
+            MergeRowChangeProcessor rowChangeProcessor = createRowChangeProcessor(
+                    node.getTarget().getMergeParadigmAndTypes(), rowIdChannel, mergeRowChannel,
+                    redistributionColumns, dataColumnChannels);
+
+            OperatorFactory operatorFactory = new MergeWriterOperator.MergeWriterOperatorFactory(
+                    context.getNextOperatorId(), node.getId(), pageSinkManager, node.getTarget(), session,
+                    tableCommitContextCodec);
+
+            // TODO: Implementar correctamente el MergeWriterOperatorFactory y luego cambiar esta llamada a la factoria.
+//            OperatorFactory operatorFactory = new MergeWriterOperator.MergeWriterOperatorFactory(
+//                    context.getNextOperatorId(),
+//                    node.getId(),
+//                    rowChangeProcessor,
+//                    Collections.singletonList(rowIdChannel), // TODO: Workaround para que compile. Esto está mal seguro.
+//                    tableCommitContextCodec);
+            return new PhysicalOperation(operatorFactory, nodeLayout, context, source);
+        }
+
+        private MergeRowChangeProcessor createRowChangeProcessor(
+                TableWriterNode.MergeParadigmAndTypes merge,
+                int rowIdChannel,
+                int mergeRowChannel,
+                List<Integer> redistributionColumnChannels,
+                List<Integer> dataColumnChannels)
+        {
+            switch (merge.getParadigm()) {
+                case DELETE_ROW_AND_INSERT_ROW:
+                    return new DeleteAndInsertMergeProcessor(
+                        merge.getColumnTypes(),
+                        merge.getRowIdType(),
+                        rowIdChannel,
+                        mergeRowChannel,
+                        redistributionColumnChannels,
+                        dataColumnChannels);
+                case CHANGE_ONLY_UPDATED_COLUMNS:
+                    return new ChangeOnlyUpdatedColumnsMergeProcessor(
+                        rowIdChannel,
+                        mergeRowChannel,
+                        dataColumnChannels,
+                        redistributionColumnChannels);
+                default:
+                    throw new PrestoException(NOT_SUPPORTED, "Merge paradigm not supported: " + merge.getParadigm());
+            }
+        }
+
+        @Override
         public PhysicalOperation visitStatisticsWriterNode(StatisticsWriterNode node, LocalExecutionPlanContext context)
         {
             PhysicalOperation source = node.getSource().accept(this, context);
@@ -3460,6 +3544,10 @@ public class LocalExecutionPlanner
             }
             else if (target instanceof UpdateHandle) {
                 metadata.finishUpdate(session, ((UpdateHandle) target).getHandle(), fragments);
+                return Optional.empty();
+            }
+            else if (target instanceof MergeHandle) {
+                metadata.finishMerge(session, ((MergeHandle) target).getHandle(), fragments, statistics);
                 return Optional.empty();
             }
             else {

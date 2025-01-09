@@ -83,6 +83,8 @@ import com.facebook.presto.sql.planner.plan.InternalPlanVisitor;
 import com.facebook.presto.sql.planner.plan.JoinNode;
 import com.facebook.presto.sql.planner.plan.LateralJoinNode;
 import com.facebook.presto.sql.planner.plan.MergeJoinNode;
+import com.facebook.presto.sql.planner.plan.MergeProcessorNode;
+import com.facebook.presto.sql.planner.plan.MergeWriterNode;
 import com.facebook.presto.sql.planner.plan.MetadataDeleteNode;
 import com.facebook.presto.sql.planner.plan.RemoteSourceNode;
 import com.facebook.presto.sql.planner.plan.RowNumberNode;
@@ -107,6 +109,7 @@ import com.google.common.base.CaseFormat;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
@@ -1240,6 +1243,26 @@ public class PlanPrinter
         public Void visitMetadataDelete(MetadataDeleteNode node, Void context)
         {
             addNode(node, "MetadataDelete", format("[%s]", node.getTableHandle()));
+
+            return processChildren(node, context);
+        }
+
+        @Override
+        public Void visitMergeWriter(MergeWriterNode node, Void context)
+        {
+            addNode(node, "MergeWriter", format("table: %s", node.getTarget().toString()));
+            return processChildren(node, context);
+        }
+
+        @Override
+        public Void visitMergeProcessor(MergeProcessorNode node, Void context)
+        {
+            NodeRepresentation nodeOutput = addNode(node, "MergeProcessor");
+            nodeOutput.appendDetails("target: %s", node.getTarget());
+            nodeOutput.appendDetails("merge row column: %s", node.getMergeRowSymbol());
+            nodeOutput.appendDetails("row id column: %s", node.getRowIdSymbol());
+            nodeOutput.appendDetails("redistribution columns: %s", node.getRedistributionColumnSymbols());
+            nodeOutput.appendDetails("data columns: %s", node.getDataColumnSymbols());
 
             return processChildren(node, context);
         }

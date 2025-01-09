@@ -45,6 +45,15 @@ import static org.apache.iceberg.MetadataColumns.ROW_POSITION;
 public class IcebergColumnHandle
         extends BaseHiveColumnHandle
 {
+    // Iceberg reserved row ids begin at INTEGER.MAX_VALUE and count down. Starting with MIN_VALUE here to avoid conflicts.
+    public static final int PRESTO_UPDATE_ROW_ID = Integer.MIN_VALUE;
+    public static final int PRESTO_MERGE_ROW_ID = Integer.MIN_VALUE + 1;
+    public static final String PRESTO_ROW_ID_NAME = "$row_id";
+
+    public static final int PRESTO_MERGE_FILE_RECORD_COUNT = Integer.MIN_VALUE + 2;
+    public static final int PRESTO_MERGE_PARTITION_SPEC_ID = Integer.MIN_VALUE + 3;
+    public static final int PRESTO_MERGE_PARTITION_DATA = Integer.MIN_VALUE + 4;
+
     public static final IcebergColumnHandle PATH_COLUMN_HANDLE = getIcebergColumnHandle(FILE_PATH);
     public static final ColumnMetadata PATH_COLUMN_METADATA = getColumnMetadata(FILE_PATH);
     public static final IcebergColumnHandle DATA_SEQUENCE_NUMBER_COLUMN_HANDLE = getIcebergColumnHandle(DATA_SEQUENCE_NUMBER);
@@ -94,6 +103,18 @@ public class IcebergColumnHandle
     public boolean isRowPositionColumn()
     {
         return columnIdentity.getId() == ROW_POSITION.fieldId();
+    }
+
+    @JsonIgnore
+    public boolean isUpdateRowIdColumn()
+    {
+        return columnIdentity.getId() == PRESTO_UPDATE_ROW_ID;
+    }
+
+    @JsonIgnore
+    public boolean isMergeRowIdColumn()
+    {
+        return columnIdentity.getId() == PRESTO_MERGE_ROW_ID;
     }
 
     @Override

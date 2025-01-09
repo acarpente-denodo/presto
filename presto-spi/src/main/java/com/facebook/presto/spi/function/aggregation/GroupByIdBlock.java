@@ -323,4 +323,23 @@ public class GroupByIdBlock
     {
         throw new UnsupportedOperationException("GroupByIdBlock does not support appendNull()");
     }
+
+    @Override
+    public Block copyWithAppendedNull()
+    {
+        throw new UnsupportedOperationException("GroupByIdBlock does not support newBlockWithAppendedNull()");
+    }
+
+    // TODO: Revisar si este método y el siguiente son correcto.
+    @Override
+    public Block getUnderlyingValueBlock()
+    {
+        return this;
+    }
+
+    @Override
+    public int getUnderlyingValuePosition(int position)
+    {
+        return position;
+    }
 }
