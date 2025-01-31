@@ -16,10 +16,12 @@ package com.facebook.presto.iceberg;
 import com.facebook.presto.hive.HiveCompressionCodec;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import java.util.List;
 import java.util.Map;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 public class IcebergWritableTableHandle
@@ -53,7 +55,7 @@ public class IcebergWritableTableHandle
         this.outputPath = requireNonNull(outputPath, "filePrefix is null");
         this.fileFormat = requireNonNull(fileFormat, "fileFormat is null");
         this.compressionCodec = requireNonNull(compressionCodec, "compressionCodec is null");
-        this.storageProperties = requireNonNull(storageProperties, "storageProperties is null");
+        this.storageProperties = ImmutableMap.copyOf(requireNonNull(storageProperties, "storageProperties is null"));
     }
 
     @JsonProperty
@@ -79,6 +81,13 @@ public class IcebergWritableTableHandle
     {
         return partitionSpec;
     }
+
+    // TODO: Eliminar si al final no hace falta.
+    /*@JsonProperty
+    public int getPartitionSpecId()
+    {
+        return partitionSpec.getSpecId();
+    }*/
 
     @JsonProperty
     public List<IcebergColumnHandle> getInputColumns()

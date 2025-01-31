@@ -254,3 +254,19 @@ public class ParquetPageSource
         return new LongArrayBlock(size, Optional.empty(), rowIndices);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

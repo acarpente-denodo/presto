@@ -23,6 +23,7 @@ import com.facebook.presto.common.type.TimestampType;
 import com.facebook.presto.common.type.TimestampWithTimeZoneType;
 import com.facebook.presto.common.type.TypeManager;
 import com.facebook.presto.common.type.VarcharType;
+import com.facebook.presto.hive.BaseHiveColumnHandle;
 import com.facebook.presto.hive.HivePartition;
 import com.facebook.presto.hive.HiveWrittenPartitions;
 import com.facebook.presto.hive.NodeVersion;
@@ -52,6 +53,7 @@ import com.facebook.presto.spi.connector.ConnectorOutputMetadata;
 import com.facebook.presto.spi.connector.ConnectorTableVersion;
 import com.facebook.presto.spi.connector.ConnectorTableVersion.VersionOperator;
 import com.facebook.presto.spi.connector.ConnectorTableVersion.VersionType;
+import com.facebook.presto.spi.connector.RowChangeParadigm;
 import com.facebook.presto.spi.function.StandardFunctionResolution;
 import com.facebook.presto.spi.plan.FilterStatsCalculatorService;
 import com.facebook.presto.spi.relation.RowExpression;
@@ -76,6 +78,7 @@ import org.apache.iceberg.DeleteFiles;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.FileMetadata;
 import org.apache.iceberg.IsolationLevel;
+import org.apache.iceberg.MetadataColumns;
 import org.apache.iceberg.MetricsConfig;
 import org.apache.iceberg.MetricsModes.None;
 import org.apache.iceberg.PartitionField;
@@ -94,7 +97,10 @@ import org.apache.iceberg.exceptions.ValidationException;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.TypeUtil;
 import org.apache.iceberg.types.Types;
+import org.apache.iceberg.types.Types.IntegerType;
+import org.apache.iceberg.types.Types.LongType;
 import org.apache.iceberg.types.Types.NestedField;
+import org.apache.iceberg.types.Types.StringType;
 import org.apache.iceberg.util.CharSequenceSet;
 import org.apache.iceberg.view.View;
 
@@ -129,6 +135,10 @@ import static com.facebook.presto.iceberg.IcebergErrorCode.ICEBERG_COMMIT_ERROR;
 import static com.facebook.presto.iceberg.IcebergErrorCode.ICEBERG_INVALID_SNAPSHOT_ID;
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.DATA_SEQUENCE_NUMBER;
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.FILE_PATH;
+import static com.facebook.presto.iceberg.IcebergMetadataColumn.MERGE_FILE_RECORD_COUNT;
+import static com.facebook.presto.iceberg.IcebergMetadataColumn.MERGE_PARTITION_DATA;
+import static com.facebook.presto.iceberg.IcebergMetadataColumn.MERGE_PARTITION_SPEC_ID;
+import static com.facebook.presto.iceberg.IcebergMetadataColumn.MERGE_ROW_DATA;
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.UPDATE_ROW_DATA;
 import static com.facebook.presto.iceberg.IcebergPartitionType.ALL;
 import static com.facebook.presto.iceberg.IcebergSessionProperties.getCompressionCodec;
@@ -179,6 +189,7 @@ import static com.facebook.presto.iceberg.optimizer.IcebergPlanOptimizer.getEnfo
 import static com.facebook.presto.iceberg.util.StatisticsUtil.calculateBaseTableStatistics;
 import static com.facebook.presto.iceberg.util.StatisticsUtil.calculateStatisticsConsideringLayout;
 import static com.facebook.presto.spi.StandardErrorCode.NOT_SUPPORTED;
+import static com.facebook.presto.spi.connector.RowChangeParadigm.DELETE_ROW_AND_INSERT_ROW;
 import static com.facebook.presto.spi.statistics.TableStatisticType.ROW_COUNT;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -619,6 +630,52 @@ public abstract class IcebergAbstractMetadata
     public ColumnHandle getDeleteRowIdColumnHandle(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
         return IcebergColumnHandle.create(ROW_POSITION, typeManager, REGULAR);
+    }
+
+    /**
+     * Return the row change paradigm supported by the connector on the table.
+     */
+    @Override
+    public RowChangeParadigm getRowChangeParadigm(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        return DELETE_ROW_AND_INSERT_ROW;
+    }
+
+    @Override
+    public ColumnHandle getMergeRowIdColumnHandle(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        // TODO: código creado a partir del getDeleteRowIdColumnHandle.
+//        return IcebergColumnHandle.create(ROW_POSITION, typeManager, IcebergColumnHandle.ColumnType.SYNTHESIZED);
+
+        // TODO: codigo trino
+        Types.StructType type = Types.StructType.of(ImmutableList.<NestedField>builder()
+                        .add(MetadataColumns.FILE_PATH)
+                        .add(MetadataColumns.ROW_POSITION)
+                        .add(NestedField.required(MERGE_FILE_RECORD_COUNT.getId(), MERGE_FILE_RECORD_COUNT.getColumnName(), LongType.get()))
+                        .add(NestedField.required(MERGE_PARTITION_SPEC_ID.getId(), MERGE_PARTITION_SPEC_ID.getColumnName(), IntegerType.get()))
+                        .add(NestedField.required(MERGE_PARTITION_DATA.getId(), MERGE_PARTITION_DATA.getColumnName(), StringType.get()))
+                        .build());
+
+        NestedField field = NestedField.required(MERGE_ROW_DATA.getId(), MERGE_ROW_DATA.getColumnName(), type);
+        return IcebergColumnHandle.create(field, typeManager, SYNTHESIZED);
+
+
+        // TODO: Codigo sacado del getUpdateRowIdColumnHandler()
+//        List<NestedField> unmodifiedColumns = new ArrayList<>();
+//        unmodifiedColumns.add(ROW_POSITION);
+//        // Include all the non-updated columns. These are needed when writing the new data file with updated column values.
+//        IcebergTableHandle table = (IcebergTableHandle) tableHandle;
+//        Set<Integer> updatedFields = updatedColumns.stream()
+//                .map(IcebergColumnHandle.class::cast)
+//                .map(IcebergColumnHandle::getId)
+//                .collect(toImmutableSet());
+//        for (NestedField column : SchemaParser.fromJson(table.getTableSchemaJson().get()).columns()) {
+//            if (!updatedFields.contains(column.fieldId())) {
+//                unmodifiedColumns.add(column);
+//            }
+//        }
+//        NestedField field = NestedField.required(UPDATE_ROW_DATA.getId(), UPDATE_ROW_DATA.getColumnName(), Types.StructType.of(unmodifiedColumns));
+//        return IcebergColumnHandle.create(field, typeManager, SYNTHESIZED);
     }
 
     @Override
@@ -1180,6 +1237,7 @@ public abstract class IcebergAbstractMetadata
                 unmodifiedColumns.add(column);
             }
         }
+
         NestedField field = NestedField.required(UPDATE_ROW_DATA.getId(), UPDATE_ROW_DATA.getColumnName(), Types.StructType.of(unmodifiedColumns));
         return IcebergColumnHandle.create(field, typeManager, SYNTHESIZED);
     }

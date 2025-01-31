@@ -17,7 +17,10 @@ import com.facebook.presto.spi.SourceLocation;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.plan.PlanVisitor;
+import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.List;
 import java.util.Optional;
 
 public abstract class InternalPlanNode
@@ -35,6 +38,10 @@ public abstract class InternalPlanNode
         }
         return visitor.visitPlan(this, context);
     }
+
+    // TODO: echarle uno ojo a todos los getOutputSymbols usados en Trino ya que en presto fueron reemplazados por el VariableReferenceExpression.
+//    @JsonProperty("outputs")
+//    public abstract List<VariableReferenceExpression> getOutputSymbols();
 
     public <R, C> R accept(InternalPlanVisitor<R, C> visitor, C context)
     {

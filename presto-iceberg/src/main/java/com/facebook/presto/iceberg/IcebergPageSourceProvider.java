@@ -90,6 +90,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockMissingException;
+import org.apache.iceberg.MetadataColumns;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.PartitionSpecParser;
 import org.apache.iceberg.Schema;
@@ -126,6 +127,8 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.facebook.presto.common.type.BigintType.BIGINT;
+import static com.facebook.presto.common.type.IntegerType.INTEGER;
 import static com.facebook.presto.common.type.VarcharType.VARCHAR;
 import static com.facebook.presto.hive.BaseHiveColumnHandle.ColumnType.REGULAR;
 import static com.facebook.presto.hive.BaseHiveColumnHandle.ColumnType.SYNTHESIZED;
@@ -246,6 +249,9 @@ public class IcebergPageSourceProvider
             Path path,
             long start,
             long length,
+            /*long fileRecordCount, TODO: implementar este método.
+            int partitionSpecId,
+            String partitionData,*/
             List<IcebergColumnHandle> regularColumns,
             TupleDomain<IcebergColumnHandle> effectivePredicate,
             FileFormatDataSourceStats fileFormatDataSourceStats,
@@ -806,6 +812,38 @@ public class IcebergPageSourceProvider
                         }
                     });
         });
+
+  /* TODO: Codigo traido de trino. Puede que ya no haga falta tras los cambios de Zac Blanco
+        icebergColumns.stream()
+                .filter(column -> column.isUpdateRowIdColumn() || column.isMergeRowIdColumn())
+                .findFirst().ifPresent(rowIdColumn -> {
+                    Set<Integer> alreadyRequiredColumnIds = regularColumns.stream()
+                            .map(IcebergColumnHandle::getId)
+                            .collect(toImmutableSet());
+                    for (ColumnIdentity identity : rowIdColumn.getColumnIdentity().getChildren()) {
+                        if (alreadyRequiredColumnIds.contains(identity.getId())) {
+                            // ignore
+                        }
+                        else if (identity.getId() == MetadataColumns.FILE_PATH.fieldId()) {
+                            regularColumns.add(new IcebergColumnHandle(identity, VARCHAR, Optional.empty(), SYNTHESIZED, ImmutableList.of()));
+                        }
+                        else if (identity.getId() == ROW_POSITION.fieldId()) {
+                            regularColumns.add(new IcebergColumnHandle(identity, BIGINT, Optional.empty(), SYNTHESIZED, ImmutableList.of()));
+                        }
+                        else if (identity.getId() == PRESTO_MERGE_FILE_RECORD_COUNT) {
+                            regularColumns.add(new IcebergColumnHandle(identity, BIGINT, Optional.empty(), SYNTHESIZED, ImmutableList.of()));
+                        }
+                        else if (identity.getId() == PRESTO_MERGE_PARTITION_SPEC_ID) {
+                            regularColumns.add(new IcebergColumnHandle(identity, INTEGER, Optional.empty(), SYNTHESIZED, ImmutableList.of()));
+                        }
+                        else if (identity.getId() == PRESTO_MERGE_PARTITION_DATA) {
+                            regularColumns.add(new IcebergColumnHandle(identity, VARCHAR, Optional.empty(), SYNTHESIZED, ImmutableList.of()));
+                        }
+                        else {
+                            regularColumns.add(IcebergUtil.getColumnHandle(tableSchema.findField(identity.getId()), typeManager));
+                        }
+                    }
+                });*/
 
         // TODO: pushdownFilter for icebergLayout
         HdfsContext hdfsContext = new HdfsContext(session, table.getSchemaName(), table.getIcebergTableName().getTableName());

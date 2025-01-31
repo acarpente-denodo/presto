@@ -13,6 +13,7 @@
  */
 package com.facebook.presto.sql.planner.plan;
 
+import com.facebook.presto.spi.plan.MergeJoinNode;
 import com.facebook.presto.spi.plan.PlanVisitor;
 import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.CanonicalTableScanNode;
@@ -44,6 +45,23 @@ public abstract class InternalPlanVisitor<R, C>
 
     public R visitIndexJoin(IndexJoinNode node, C context)
     {
+        return visitPlan(node, context);
+    }
+
+    public R visitMergeJoin(MergeJoinNode node, C context)
+    {
+        return visitPlan(node, context);
+    }
+
+    public R visitMergeWriter(MergeWriterNode node, C context)
+    {
+        // TODO: Hay que sobreescribir este método en las subclases.
+        return visitPlan(node, context);
+    }
+
+    public R visitMergeProcessor(MergeProcessorNode node, C context)
+    {
+        // TODO: Hay que sobreescribir este método en las subclases.
         return visitPlan(node, context);
     }
 

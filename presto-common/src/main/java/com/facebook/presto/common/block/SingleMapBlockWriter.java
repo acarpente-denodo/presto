@@ -266,6 +266,25 @@ public class SingleMapBlockWriter
         throw new UnsupportedOperationException();
     }
 
+    // TODO: Check if the following three methods are correct
+    @Override
+    public Block copyWithAppendedNull()
+    {
+        throw new UnsupportedOperationException("SingleMapBlockWriter does not support newBlockWithAppendedNull()");
+    }
+
+    @Override
+    public Block getUnderlyingValueBlock()
+    {
+        return this;
+    }
+
+    @Override
+    public int getUnderlyingValuePosition(int position)
+    {
+        return position;
+    }
+
     @Override
     public String toString()
     {

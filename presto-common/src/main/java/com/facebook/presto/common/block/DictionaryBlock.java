@@ -508,6 +508,75 @@ public class DictionaryBlock
         return new DictionaryBlock(idsOffset, getPositionCount(), loadedDictionary, ids, false, randomDictionaryId());
     }
 
+    @Override
+    public Block copyWithAppendedNull()
+    {
+        int desiredLength = idsOffset + positionCount + 1;
+        int[] newIds = Arrays.copyOf(ids, desiredLength);
+        Block newDictionary = dictionary;
+
+        int nullIndex = NULL_NOT_FOUND;
+
+        if (dictionary.mayHaveNull()) {
+            int dictionaryPositionCount = dictionary.getPositionCount();
+            for (int i = 0; i < dictionaryPositionCount; i++) {
+                if (dictionary.isNull(i)) {
+                    nullIndex = i;
+                    break;
+                }
+            }
+        }
+
+        if (nullIndex == NULL_NOT_FOUND) {
+            newIds[idsOffset + positionCount] = dictionary.getPositionCount();
+            newDictionary = dictionary.copyWithAppendedNull();
+        }
+        else {
+            newIds[idsOffset + positionCount] = nullIndex;
+        }
+
+        return new DictionaryBlock(idsOffset, positionCount + 1, newDictionary, newIds, isCompact(), getDictionarySourceId());
+    }
+
+    @Override
+    public Block getUnderlyingValueBlock()
+    {
+        return dictionary.getUnderlyingValueBlock();
+    }
+
+    @Override
+    public int getUnderlyingValuePosition(int position)
+    {
+        return dictionary.getUnderlyingValuePosition(getId(position));
+    }
+
+    public Block createProjection(Block newDictionary)
+    {
+        if (newDictionary.getPositionCount() != dictionary.getPositionCount()) {
+            throw new IllegalArgumentException("newDictionary must have the same position count");
+        }
+
+        // if the new dictionary is lazy be careful to not materialize it
+        if (newDictionary instanceof LazyBlock) {
+            return new LazyBlock(positionCount, (block) -> {
+                Block newDictionaryBlock = newDictionary.getBlock(0);
+                Block newBlock = createProjection(newDictionaryBlock);
+                block.setBlock(newBlock);
+            });
+        }
+        if (newDictionary instanceof RunLengthEncodedBlock) {
+            RunLengthEncodedBlock rle = (RunLengthEncodedBlock) newDictionary;
+            return new RunLengthEncodedBlock(rle.getValue(), positionCount);
+        }
+
+        // unwrap dictionary in dictionary
+        int[] newIds = new int[positionCount];
+        for (int position = 0; position < positionCount; position++) {
+            newIds[position] = newDictionary.getUnderlyingValuePosition(getIdUnchecked(position));
+        }
+        return new DictionaryBlock(0, positionCount, newDictionary.getUnderlyingValueBlock(), newIds, false, randomDictionaryId());
+    }
+
     public Block getDictionary()
     {
         return dictionary;
@@ -530,6 +599,11 @@ public class DictionaryBlock
     public int getId(int position)
     {
         checkValidPosition(position, positionCount);
+        return ids[position + idsOffset];
+    }
+
+    private int getIdUnchecked(int position)
+    {
         return ids[position + idsOffset];
     }
 

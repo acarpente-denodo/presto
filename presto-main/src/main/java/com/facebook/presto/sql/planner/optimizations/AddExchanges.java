@@ -71,12 +71,14 @@ import com.facebook.presto.sql.planner.plan.IndexJoinNode;
 import com.facebook.presto.sql.planner.plan.IndexSourceNode;
 import com.facebook.presto.sql.planner.plan.InternalPlanVisitor;
 import com.facebook.presto.sql.planner.plan.LateralJoinNode;
+import com.facebook.presto.sql.planner.plan.MergeWriterNode;
 import com.facebook.presto.sql.planner.plan.RowNumberNode;
 import com.facebook.presto.sql.planner.plan.SequenceNode;
 import com.facebook.presto.sql.planner.plan.StatisticsWriterNode;
 import com.facebook.presto.sql.planner.plan.TopNRowNumberNode;
 import com.facebook.presto.sql.planner.plan.UnnestNode;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.VerifyException;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -737,9 +739,19 @@ public class AddExchanges
             PlanWithProperties source = accept(node.getSource(), preferredProperties);
 
             Optional<PartitioningScheme> shufflePartitioningScheme = node.getTablePartitioningScheme();
-            if (!node.isSingleWriterPerPartitionRequired()) {
-                // prefer scale writers if single writer per partition is not required
-                // TODO: take into account partitioning scheme in scale writer tasks implementation
+
+            source = getWriterPlanWithProperties(node.getTablePartitioningScheme(), shufflePartitioningScheme, source, node.isSingleWriterPerPartitionRequired());
+
+            return rebaseAndDeriveProperties(node, source);
+        }
+
+        private PlanWithProperties getWriterPlanWithProperties(
+                Optional<PartitioningScheme> nodeTablePartitioningScheme,
+                Optional<PartitioningScheme> shufflePartitioningScheme,
+                PlanWithProperties source,
+                boolean isSingleWriterPerPartitionRequired)
+        {
+            if (!isSingleWriterPerPartitionRequired && !shufflePartitioningScheme.isPresent()) {
                 if (scaleWriters) {
                     shufflePartitioningScheme = Optional.of(new PartitioningScheme(Partitioning.create(SCALED_WRITER_DISTRIBUTION, ImmutableList.of()), source.getNode().getOutputVariables()));
                 }
@@ -747,19 +759,20 @@ public class AddExchanges
                     shufflePartitioningScheme = Optional.of(new PartitioningScheme(Partitioning.create(FIXED_ARBITRARY_DISTRIBUTION, ImmutableList.of()), source.getNode().getOutputVariables()));
                 }
                 else {
-                    return rebaseAndDeriveProperties(node, source);
+                    return source;
                 }
             }
 
+            PlanWithProperties newSource = source;
             if (shufflePartitioningScheme.isPresent() &&
                     // TODO: Deprecate compatible table partitioning
-                    !source.getProperties().isCompatibleTablePartitioningWith(shufflePartitioningScheme.get().getPartitioning(), false, metadata, session) &&
-                    !(source.getProperties().isRefinedPartitioningOver(shufflePartitioningScheme.get().getPartitioning(), false, metadata, session) &&
-                            canPushdownPartialMerge(source.getNode(), partialMergePushdownStrategy))) {
+                    !newSource.getProperties().isCompatibleTablePartitioningWith(shufflePartitioningScheme.get().getPartitioning(), false, metadata, session) &&
+                    !(newSource.getProperties().isRefinedPartitioningOver(shufflePartitioningScheme.get().getPartitioning(), false, metadata, session) &&
+                            canPushdownPartialMerge(newSource.getNode(), partialMergePushdownStrategy))) {
                 PartitioningScheme exchangePartitioningScheme = shufflePartitioningScheme.get();
-                if (node.getTablePartitioningScheme().isPresent() && isPrestoSparkAssignBucketToPartitionForPartitionedTableWriteEnabled(session)) {
+                if (nodeTablePartitioningScheme.isPresent() && isPrestoSparkAssignBucketToPartitionForPartitionedTableWriteEnabled(session)) {
                     int writerThreadsPerNode = getTaskPartitionedWriterCount(session);
-                    int bucketCount = getBucketCount(node.getTablePartitioningScheme().get().getPartitioning().getHandle());
+                    int bucketCount = getBucketCount(nodeTablePartitioningScheme.get().getPartitioning().getHandle());
                     int[] bucketToPartition = new int[bucketCount];
                     for (int i = 0; i < bucketCount; i++) {
                         bucketToPartition[i] = i / writerThreadsPerNode;
@@ -767,15 +780,27 @@ public class AddExchanges
                     exchangePartitioningScheme = exchangePartitioningScheme.withBucketToPartition(Optional.of(bucketToPartition));
                 }
 
-                source = withDerivedProperties(
+                newSource = withDerivedProperties(
                         partitionedExchange(
                                 idAllocator.getNextId(),
                                 REMOTE_STREAMING,
-                                source.getNode(),
+                                newSource.getNode(),
                                 exchangePartitioningScheme),
-                        source.getProperties());
+                        newSource.getProperties());
             }
-            return rebaseAndDeriveProperties(node, source);
+            return newSource;
+        }
+
+        @Override
+        public PlanWithProperties visitMergeWriter(MergeWriterNode node, PreferredProperties preferredProperties)
+        {
+            PlanWithProperties source = node.getSource().accept(this, preferredProperties);
+
+            Optional<PartitioningScheme> partitioningScheme = node.getPartitioningScheme();
+            // TODO: Verificar si pasarle dos veces el mismo partitioningScheme es correcto.
+            PlanWithProperties partitionedSource = getWriterPlanWithProperties(partitioningScheme, partitioningScheme, source, false /* TODO: provisionalmente valor false. Puede que debiesemos usar "node.isSingleWriterPerPartitionRequired()"*/);
+
+            return rebaseAndDeriveProperties(node, partitionedSource);
         }
 
         private int getBucketCount(PartitioningHandle partitioning)
