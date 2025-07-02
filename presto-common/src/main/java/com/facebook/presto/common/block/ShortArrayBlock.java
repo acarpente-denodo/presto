@@ -29,6 +29,7 @@ import static com.facebook.presto.common.block.BlockUtil.appendNullToIsNullArray
 import static com.facebook.presto.common.block.BlockUtil.checkArrayRange;
 import static com.facebook.presto.common.block.BlockUtil.checkValidRegion;
 import static com.facebook.presto.common.block.BlockUtil.compactArray;
+import static com.facebook.presto.common.block.BlockUtil.copyIsNullAndAppendNull;
 import static com.facebook.presto.common.block.BlockUtil.internalPositionInRange;
 import static io.airlift.slice.SizeOf.sizeOf;
 import static java.lang.String.format;
@@ -276,6 +277,26 @@ public class ShortArrayBlock
     {
         checkReadablePosition(position);
         return getShortUnchecked(position + arrayOffset);
+    }
+
+    @Override
+    public ShortArrayBlock copyWithAppendedNull()
+    {
+        boolean[] newValueIsNull = copyIsNullAndAppendNull(valueIsNull, arrayOffset, positionCount);
+        short[] newValues = ensureCapacity(values, arrayOffset + positionCount + 1);
+        return new ShortArrayBlock(arrayOffset, positionCount + 1, newValueIsNull, newValues);
+    }
+
+    @Override
+    public ShortArrayBlock getUnderlyingValueBlock()
+    {
+        return this;
+    }
+
+    @Override
+    public int getUnderlyingValuePosition(int position)
+    {
+        return position;
     }
 
     @Override

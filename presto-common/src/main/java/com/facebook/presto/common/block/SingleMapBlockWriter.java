@@ -266,6 +266,26 @@ public class SingleMapBlockWriter
         throw new UnsupportedOperationException();
     }
 
+    // TODO #20578: Check if the following methods are really necessary. In Presto there is no ValueBlock.
+    //                          It seems that these two methods and the implementations in all classes that inherit from Block can be removed.
+    @Override
+    public Block copyWithAppendedNull()
+    {
+        throw new UnsupportedOperationException("SingleMapBlockWriter does not support newBlockWithAppendedNull()");
+    }
+
+    @Override
+    public Block getUnderlyingValueBlock()
+    {
+        return this;
+    }
+
+    @Override
+    public int getUnderlyingValuePosition(int position)
+    {
+        return position;
+    }
+
     @Override
     public String toString()
     {

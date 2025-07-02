@@ -550,4 +550,16 @@ public abstract class AbstractMapBlock
                 (Integer.BYTES + Byte.BYTES) * (long) this.getPositionCount() +
                 Integer.BYTES * HASH_MULTIPLIER * (long) entryCount;
     }
+
+    @Override
+    public AbstractMapBlock getUnderlyingValueBlock()
+    {
+        return this;
+    }
+
+    @Override
+    public int getUnderlyingValuePosition(int position)
+    {
+        return position;
+    }
 }

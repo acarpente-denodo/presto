@@ -400,4 +400,26 @@ public interface Block
     {
         throw new UnsupportedOperationException(getClass().getName());
     }
+
+    /**
+     * Returns a block that contains a copy of the contents of the current block, and an appended null at the end. The
+     * original block will not be modified. The purpose of this method is to leverage the contents of a block and the
+     * structure of the implementation to efficiently produce a copy of the block with a NULL element inserted - so that
+     * it can be used as a dictionary. This method is expected to be invoked on completely built {@link Block} instances
+     * i.e. not on in-progress block builders.
+     */
+    Block copyWithAppendedNull();
+
+    // TODO #20578: Check if the following methods are really necessary. In Presto there is no ValueBlock.
+    //                          It seems that these two methods and the implementations in all classes that inherit from Block can be removed.
+
+    /**
+     * Returns the underlying value block underlying this block.
+     */
+    Block getUnderlyingValueBlock();
+
+    /**
+     * Returns the position in the underlying value block corresponding to the specified position in this block.
+     */
+    int getUnderlyingValuePosition(int position);
 }

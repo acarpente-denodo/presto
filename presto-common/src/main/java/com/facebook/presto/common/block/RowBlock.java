@@ -18,10 +18,14 @@ import org.openjdk.jol.info.ClassLayout;
 import javax.annotation.Nullable;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.ObjLongConsumer;
+import java.util.stream.Collectors;
 
+import static com.facebook.presto.common.block.BlockUtil.copyIsNullAndAppendNull;
+import static com.facebook.presto.common.block.BlockUtil.copyOffsetsAndAppendNull;
 import static com.facebook.presto.common.block.BlockUtil.ensureBlocksAreLoaded;
 import static io.airlift.slice.SizeOf.sizeOf;
 import static java.lang.String.format;
@@ -247,6 +251,64 @@ public class RowBlock
             consumer.accept(rowIsNull, sizeOf(rowIsNull));
         }
         consumer.accept(this, INSTANCE_SIZE);
+    }
+
+    /**
+     * Returns the row fields from the specified block. The block maybe a LazyBlock, RunLengthEncodedBlock, or
+     * DictionaryBlock, but the underlying block must be a RowBlock. The returned field blocks will be the same
+     * length as the specified block, which means they are not null suppressed.
+     */
+    public static List<Block> getRowFieldsFromBlock(Block block)
+    {
+        // if the block is lazy, be careful to not materialize the nested blocks
+        if (block instanceof LazyBlock) {
+            LazyBlock lazyBlock = (LazyBlock) block;
+            block = lazyBlock.getBlock(0);
+        }
+
+        if (block instanceof RunLengthEncodedBlock) {
+            RunLengthEncodedBlock runLengthEncodedBlock = (RunLengthEncodedBlock) block;
+            RowBlock rowBlock = (RowBlock) runLengthEncodedBlock.getValue();
+            return Arrays.stream(rowBlock.fieldBlocks) // TODO #20578: Should we create the attribute "fieldBlocksList" and avoid building the list multiple times?
+                    .map(fieldBlock -> new RunLengthEncodedBlock(fieldBlock, runLengthEncodedBlock.getPositionCount()))
+                    .collect(Collectors.toList());
+        }
+        if (block instanceof DictionaryBlock) {
+            DictionaryBlock dictionaryBlock = (DictionaryBlock) block;
+            RowBlock rowBlock = (RowBlock) dictionaryBlock.getDictionary();
+            return Arrays.stream(rowBlock.fieldBlocks) // TODO #20578: Should we create the attribute "fieldBlocksList" and avoid building the list multiple times?
+                    .map(dictionaryBlock::createProjection)
+                    .collect(Collectors.toList());
+        }
+        if (block instanceof RowBlock) {
+            return Arrays.asList(((RowBlock) block).fieldBlocks); // TODO #20578: Should we create the attribute "fieldBlocksList" and avoid building the list multiple times?
+        }
+        throw new IllegalArgumentException("Unexpected block type: " + block.getClass().getSimpleName());
+    }
+
+    @Override
+    public RowBlock copyWithAppendedNull()
+    {
+        boolean[] newRowIsNull = copyIsNullAndAppendNull(rowIsNull, startOffset, getPositionCount());
+
+        int[] newOffsets;
+        if (fieldBlockOffsets == null) {
+            int desiredLength = startOffset + positionCount + 2;
+            newOffsets = new int[desiredLength];
+            newOffsets[startOffset] = startOffset;
+            for (int position = startOffset; position < startOffset + positionCount; position++) {
+                // Since there are no nulls in the original array, new offsets are the same as previous ones
+                newOffsets[position + 1] = newOffsets[position] + 1;
+            }
+
+            // Null does not change offset
+            newOffsets[desiredLength - 1] = newOffsets[desiredLength - 2];
+        }
+        else {
+            newOffsets = copyOffsetsAndAppendNull(fieldBlockOffsets, startOffset, getPositionCount());
+        }
+
+        return createRowBlockInternal(startOffset, getPositionCount() + 1, newRowIsNull, newOffsets, fieldBlocks);
     }
 
     @Override

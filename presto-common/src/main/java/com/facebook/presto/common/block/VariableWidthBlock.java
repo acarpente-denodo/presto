@@ -35,6 +35,8 @@ import static com.facebook.presto.common.block.BlockUtil.checkValidRegion;
 import static com.facebook.presto.common.block.BlockUtil.compactArray;
 import static com.facebook.presto.common.block.BlockUtil.compactOffsets;
 import static com.facebook.presto.common.block.BlockUtil.compactSlice;
+import static com.facebook.presto.common.block.BlockUtil.copyIsNullAndAppendNull;
+import static com.facebook.presto.common.block.BlockUtil.copyOffsetsAndAppendNull;
 import static com.facebook.presto.common.block.BlockUtil.internalPositionInRange;
 import static io.airlift.slice.SizeOf.sizeOf;
 import static io.airlift.slice.Slices.EMPTY_SLICE;
@@ -325,6 +327,27 @@ public class VariableWidthBlock
         int[] newOffsets = appendNullToOffsetsArray(offsets, arrayOffset, positionCount);
 
         return new VariableWidthBlock(arrayOffset, positionCount + 1, slice, newOffsets, newValueIsNull);
+    }
+
+    @Override
+    public VariableWidthBlock copyWithAppendedNull()
+    {
+        boolean[] newValueIsNull = copyIsNullAndAppendNull(valueIsNull, arrayOffset, positionCount);
+        int[] newOffsets = copyOffsetsAndAppendNull(offsets, arrayOffset, positionCount);
+
+        return new VariableWidthBlock(arrayOffset, positionCount + 1, slice, newOffsets, newValueIsNull);
+    }
+
+    @Override
+    public VariableWidthBlock getUnderlyingValueBlock()
+    {
+        return this;
+    }
+
+    @Override
+    public int getUnderlyingValuePosition(int position)
+    {
+        return position;
     }
 
     @Override
