@@ -428,9 +428,9 @@ public abstract class DelegatingMetadataManager
     }
 
     @Override
-    public MergeHandle beginMerge(Session session, TableHandle tableHandle)
+    public MergeHandle beginMerge(Session session, TableHandle tableHandle, List<ColumnHandle> updatedColumns)
     {
-        return delegate.beginMerge(session, tableHandle);
+        return delegate.beginMerge(session, tableHandle, updatedColumns);
     }
 
     @Override
