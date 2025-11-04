@@ -161,7 +161,6 @@ import static com.facebook.presto.sql.planner.TranslateExpressionsUtil.toRowExpr
 import static com.facebook.presto.sql.planner.optimizations.WindowNodeUtil.toBoundType;
 import static com.facebook.presto.sql.planner.optimizations.WindowNodeUtil.toWindowType;
 import static com.facebook.presto.sql.relational.Expressions.call;
-import static com.facebook.presto.sql.tree.BooleanLiteral.FALSE_LITERAL;
 import static com.facebook.presto.sql.tree.BooleanLiteral.TRUE_LITERAL;
 import static com.facebook.presto.sql.tree.ComparisonExpression.Operator.GREATER_THAN_OR_EQUAL;
 import static com.facebook.presto.sql.tree.IntervalLiteral.IntervalField.DAY;
@@ -451,14 +450,14 @@ class QueryPlanner
      *    SELECT
      *        CASE
      *            WHEN NOT MATCHED THEN
-     *                -- Insert column values:             present=false, operation INSERT=1, case_number=0
-     *                row(s.column1, s.column2, s.column3, false, 1, 1)
+     *                -- Insert column values:             operation INSERT=1, case_number=0
+     *                row(s.column1, s.column2, s.column3, 1, 0)
      *            WHEN MATCHED THEN
-     *                -- Update column values:             present=true,  operation UPDATE=3, case_number=1
-     *                row(t.column1, s.column1 + t.column1, s.column2, true, 3, 0)
+     *                -- Update column values:             operation UPDATE=3, case_number=1
+     *                row(t.column1, s.column1 + t.column1, s.column2, 3, 1)
      *            ELSE
-     *                -- Null values for no case matched:  present=false, operation=-1,       case_number=-1
-     *                row(null, null, null, false, -1, -1)
+     *                -- Null values for no case matched:  operation=-1,       case_number=-1
+     *                row(null, null, null, -1, -1)
      *            END
      *    FROM
      *        <target_table> t RIGHT JOIN <source_table> s
@@ -548,11 +547,6 @@ class QueryPlanner
                 joinResultBuilder.add(expression);
             }
 
-            // Add the "present" column value. It is a boolean column which is true if a target table row was matched.
-            SymbolReference targetUniqueIdColumnSymbolReference = createSymbolReference(targetUniqueIdVariable);
-            IsNotNullPredicate targetUniqueIdColumnIsNotNullPredicate = new IsNotNullPredicate(targetUniqueIdColumnSymbolReference);
-            joinResultBuilder.add(targetUniqueIdColumnIsNotNullPredicate);
-
             // Add the operation number
             joinResultBuilder.add(new GenericLiteral("TINYINT", String.valueOf(getMergeCaseOperationNumber(mergeCase))));
 
@@ -560,8 +554,9 @@ class QueryPlanner
             joinResultBuilder.add(new GenericLiteral("INTEGER", String.valueOf(caseNumber)));
 
             // Build the match condition for the MERGE case
+            SymbolReference targetUniqueIdColumnSymbolReference = createSymbolReference(targetUniqueIdVariable);
             Expression mergeCondition = mergeCase instanceof MergeInsert ?
-                    new IsNullPredicate(targetUniqueIdColumnSymbolReference) : targetUniqueIdColumnIsNotNullPredicate;
+                    new IsNullPredicate(targetUniqueIdColumnSymbolReference) : new IsNotNullPredicate(targetUniqueIdColumnSymbolReference);
 
             whenClauses.add(new WhenClause(mergeCondition, new Row(joinResultBuilder.build())));
         }
@@ -571,8 +566,6 @@ class QueryPlanner
         mergeAnalysis.getTargetColumnsMetadata().forEach(columnMetadata ->
                 joinElseBuilder.add(new Cast(new NullLiteral(), columnMetadata.getType().getDisplayName())));
 
-        // Add the "present" column value. It is always FALSE for the "else" clause.
-        joinElseBuilder.add(FALSE_LITERAL);
         // The operation number column value: -1
         joinElseBuilder.add(new GenericLiteral("TINYINT", "-1"));
         // The case number column value: -1
@@ -777,7 +770,7 @@ class QueryPlanner
         for (ColumnMetadata columnMetadata : allColumnsMetadata) {
             fields.add(new RowType.Field(Optional.empty(), columnMetadata.getType()));
         }
-        fields.add(new RowType.Field(Optional.empty(), BOOLEAN)); // present
+
         fields.add(new RowType.Field(Optional.empty(), TINYINT)); // operation_number
         fields.add(new RowType.Field(Optional.empty(), INTEGER)); // case_number
         return RowType.from(fields);
