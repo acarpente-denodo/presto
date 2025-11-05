@@ -85,6 +85,7 @@ import com.facebook.presto.spi.ConnectorHandleResolver;
 import com.facebook.presto.spi.ConnectorId;
 import com.facebook.presto.spi.ConnectorIndexHandle;
 import com.facebook.presto.spi.ConnectorInsertTableHandle;
+import com.facebook.presto.spi.ConnectorMergeTableHandle;
 import com.facebook.presto.spi.ConnectorOutputTableHandle;
 import com.facebook.presto.spi.ConnectorSplit;
 import com.facebook.presto.spi.ConnectorTableHandle;
@@ -984,6 +985,25 @@ public class TestHttpRemoteTaskConnectorCodec
                 }
             });
         }
+
+        public Optional<ConnectorCodec<ConnectorMergeTableHandle>> getConnectorMergeTableHandleCodec()
+        {
+            return Optional.of(new ConnectorCodec<>()
+            {
+                @Override
+                public byte[] serialize(ConnectorMergeTableHandle handle)
+                {
+                    TestConnectorMergeTableHandle mergeTableHandle = (TestConnectorMergeTableHandle) handle;
+                    return mergeTableHandle.getTableName().getBytes(UTF_8);
+                }
+
+                @Override
+                public ConnectorMergeTableHandle deserialize(byte[] data)
+                {
+                    return new TestConnectorMergeTableHandle(new String(data, UTF_8));
+                }
+            });
+        }
     }
 
     /**
@@ -1287,6 +1307,53 @@ public class TestHttpRemoteTaskConnectorCodec
         }
     }
 
+    /**
+     * Test merge table handle with binary serialization support
+     */
+    public static class TestConnectorMergeTableHandle
+            implements ConnectorMergeTableHandle
+    {
+        private final String tableName;
+
+        @JsonCreator
+        public TestConnectorMergeTableHandle(
+                @JsonProperty("tableName") String tableName)
+        {
+            this.tableName = tableName;
+        }
+
+        @JsonProperty
+        public String getTableName()
+        {
+            return tableName;
+        }
+
+        @Override
+        public ConnectorTableHandle getTableHandle()
+        {
+            throw new UnsupportedOperationException("Merge table handles not supported");
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            TestConnectorMergeTableHandle that = (TestConnectorMergeTableHandle) o;
+            return tableName.equals(that.tableName);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(tableName);
+        }
+    }
+
     public static class TestConnectorWithoutCodecSplit
             implements ConnectorSplit
     {
@@ -1395,6 +1462,12 @@ public class TestHttpRemoteTaskConnectorCodec
         public Class<? extends ConnectorDeleteTableHandle> getDeleteTableHandleClass()
         {
             throw new UnsupportedOperationException("Delete table handles not supported");
+        }
+
+        @Override
+        public Class<? extends ConnectorMergeTableHandle> getMergeTableHandleClass()
+        {
+            throw new UnsupportedOperationException("Merge table handles not supported");
         }
     }
 }

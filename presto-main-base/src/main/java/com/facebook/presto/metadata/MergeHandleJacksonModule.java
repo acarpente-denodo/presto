@@ -13,18 +13,46 @@
  */
 package com.facebook.presto.metadata;
 
+import com.facebook.presto.connector.ConnectorManager;
+import com.facebook.presto.spi.ConnectorCodec;
+import com.facebook.presto.spi.ConnectorId;
 import com.facebook.presto.spi.ConnectorMergeTableHandle;
+import com.facebook.presto.spi.connector.ConnectorCodecProvider;
+import com.facebook.presto.sql.analyzer.FeaturesConfig;
+import jakarta.inject.Provider;
 
 import javax.inject.Inject;
+
+import java.util.Optional;
+import java.util.function.Function;
 
 public class MergeHandleJacksonModule
         extends AbstractTypedJacksonModule<ConnectorMergeTableHandle>
 {
     @Inject
-    public MergeHandleJacksonModule(HandleResolver handleResolver)
+    public MergeHandleJacksonModule(
+            HandleResolver handleResolver,
+            Provider<ConnectorManager> connectorManagerProvider,
+            FeaturesConfig featuresConfig)
     {
         super(ConnectorMergeTableHandle.class,
                 handleResolver::getId,
-                handleResolver::getMergeHandleClass);
+                handleResolver::getMergeHandleClass,
+                featuresConfig.isUseConnectorProvidedSerializationCodecs(),
+                connectorId -> connectorManagerProvider.get()
+                        .getConnectorCodecProvider(connectorId)
+                        .flatMap(ConnectorCodecProvider::getConnectorMergeTableHandleCodec));
+    }
+
+    public MergeHandleJacksonModule(
+            HandleResolver handleResolver,
+            FeaturesConfig featuresConfig,
+            Function<ConnectorId, Optional<ConnectorCodec<ConnectorMergeTableHandle>>> codecExtractor)
+    {
+        super(ConnectorMergeTableHandle.class,
+                handleResolver::getId,
+                handleResolver::getMergeHandleClass,
+                featuresConfig.isUseConnectorProvidedSerializationCodecs(),
+                codecExtractor);
     }
 }
