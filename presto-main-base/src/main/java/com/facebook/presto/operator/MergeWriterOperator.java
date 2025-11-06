@@ -95,7 +95,7 @@ public class MergeWriterOperator
      *             2: Source table column 2.<br>
      *             N: Source table column N.<br>
      *             N + 1: Operation: INSERT(1), DELETE(2), UPDATE(3). More info: {@link ConnectorMergeSink}<br>
-     *             N + 2: Target Table Row ID (_file:varchar, _pos:bigint, file_record_count:bigint, partition_spec_id:integer, partition_data:varchar).<br>
+     *             N + 2: Target Table Row ID (_file:varchar, _pos:bigint, partition_spec_id:integer, partition_data:varchar).<br>
      *             N + 3: Insert from update: it is 1 if the cause of the insert is an UPDATE, 0 otherwise.<br>
      */
     @Override
