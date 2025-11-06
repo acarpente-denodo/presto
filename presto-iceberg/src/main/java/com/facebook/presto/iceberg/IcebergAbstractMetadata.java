@@ -108,7 +108,6 @@ import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.TypeUtil;
 import org.apache.iceberg.types.Types;
 import org.apache.iceberg.types.Types.IntegerType;
-import org.apache.iceberg.types.Types.LongType;
 import org.apache.iceberg.types.Types.NestedField;
 import org.apache.iceberg.types.Types.StringType;
 import org.apache.iceberg.util.CharSequenceSet;
@@ -154,10 +153,9 @@ import static com.facebook.presto.iceberg.IcebergMetadataColumn.DATA_SEQUENCE_NU
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.DELETE_FILE_PATH;
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.FILE_PATH;
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.IS_DELETED;
-import static com.facebook.presto.iceberg.IcebergMetadataColumn.MERGE_FILE_RECORD_COUNT;
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.MERGE_PARTITION_DATA;
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.MERGE_PARTITION_SPEC_ID;
-import static com.facebook.presto.iceberg.IcebergMetadataColumn.MERGE_ROW_DATA;
+import static com.facebook.presto.iceberg.IcebergMetadataColumn.MERGE_TARGET_ROW_ID_DATA;
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.UPDATE_ROW_DATA;
 import static com.facebook.presto.iceberg.IcebergPartitionType.ALL;
 import static com.facebook.presto.iceberg.IcebergSessionProperties.getCompressionCodec;
@@ -736,12 +734,11 @@ public abstract class IcebergAbstractMetadata
         Types.StructType type = Types.StructType.of(ImmutableList.<NestedField>builder()
                         .add(MetadataColumns.FILE_PATH)
                         .add(MetadataColumns.ROW_POSITION)
-                        .add(NestedField.required(MERGE_FILE_RECORD_COUNT.getId(), MERGE_FILE_RECORD_COUNT.getColumnName(), LongType.get()))
                         .add(NestedField.required(MERGE_PARTITION_SPEC_ID.getId(), MERGE_PARTITION_SPEC_ID.getColumnName(), IntegerType.get()))
                         .add(NestedField.required(MERGE_PARTITION_DATA.getId(), MERGE_PARTITION_DATA.getColumnName(), StringType.get()))
                         .build());
 
-        NestedField field = NestedField.required(MERGE_ROW_DATA.getId(), MERGE_ROW_DATA.getColumnName(), type);
+        NestedField field = NestedField.required(MERGE_TARGET_ROW_ID_DATA.getId(), MERGE_TARGET_ROW_ID_DATA.getColumnName(), type);
         return IcebergColumnHandle.create(field, typeManager, SYNTHESIZED);
     }
 

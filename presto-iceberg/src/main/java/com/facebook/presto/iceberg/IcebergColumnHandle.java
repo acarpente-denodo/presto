@@ -37,7 +37,7 @@ import static com.facebook.presto.iceberg.IcebergMetadataColumn.DATA_SEQUENCE_NU
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.DELETE_FILE_PATH;
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.FILE_PATH;
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.IS_DELETED;
-import static com.facebook.presto.iceberg.IcebergMetadataColumn.MERGE_ROW_DATA;
+import static com.facebook.presto.iceberg.IcebergMetadataColumn.MERGE_TARGET_ROW_ID_DATA;
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.UPDATE_ROW_DATA;
 import static com.facebook.presto.iceberg.TypeConverter.toPrestoType;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -113,7 +113,7 @@ public class IcebergColumnHandle
     @JsonIgnore
     public boolean isMergeRowIdColumn()
     {
-        return columnIdentity.getId() == MERGE_ROW_DATA.getId();
+        return columnIdentity.getId() == MERGE_TARGET_ROW_ID_DATA.getId();
     }
 
     @Override

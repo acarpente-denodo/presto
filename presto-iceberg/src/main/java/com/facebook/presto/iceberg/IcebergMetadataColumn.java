@@ -41,10 +41,9 @@ public enum IcebergMetadataColumn
      * Inner type for row is not known until runtime.
      */
     UPDATE_ROW_DATA(Integer.MIN_VALUE, "$row_id", RowType.anonymous(ImmutableList.of(UNKNOWN)), STRUCT),
-    MERGE_ROW_DATA(Integer.MIN_VALUE + 1, "$row_id", RowType.anonymous(ImmutableList.of(UNKNOWN)), STRUCT),
-    MERGE_FILE_RECORD_COUNT(Integer.MIN_VALUE + 2, "file_record_count", BIGINT, PRIMITIVE),
-    MERGE_PARTITION_SPEC_ID(Integer.MIN_VALUE + 3, "partition_spec_id", INTEGER, PRIMITIVE),
-    MERGE_PARTITION_DATA(Integer.MIN_VALUE + 4, "partition_data", VARCHAR, PRIMITIVE)
+    MERGE_TARGET_ROW_ID_DATA(Integer.MIN_VALUE + 1, "$row_id", RowType.anonymous(ImmutableList.of(UNKNOWN)), STRUCT),
+    MERGE_PARTITION_SPEC_ID(Integer.MIN_VALUE + 2, "partition_spec_id", INTEGER, PRIMITIVE),
+    MERGE_PARTITION_DATA(Integer.MIN_VALUE + 3, "partition_data", VARCHAR, PRIMITIVE)
     /**/;
 
     private static final Set<Integer> COLUMN_IDS = Stream.of(values())
