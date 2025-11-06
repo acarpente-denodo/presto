@@ -1285,7 +1285,9 @@ public class PlanPrinter
         @Override
         public Void visitMergeProcessor(MergeProcessorNode node, Void context)
         {
-            NodeRepresentation nodeOutput = addNode(node, "MergeProcessor");
+            String identifier = format("[target: %s, output: %s]", node.getTarget(), node.getOutputVariables());
+
+            NodeRepresentation nodeOutput = addNode(node, "MergeProcessor", identifier);
             nodeOutput.appendDetails("target: %s", node.getTarget());
             nodeOutput.appendDetails("merge row column: %s", node.getMergeRowVariable());
             nodeOutput.appendDetails("row id column: %s", node.getRowIdVariable());
