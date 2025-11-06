@@ -90,6 +90,7 @@ public class IcebergUpdateablePageSource
     private final int[] updateRowIdChildColumnIndexes;
     // The $row_id's index in 'outputColumns', or -1 if there isn't one
     private final int updateRowIdColumnIndex;
+    private final int mergeTargetTableRowIdColumnIndex;
     // Maps the Iceberg field ids of unmodified columns to their indexes in updateRowIdChildColumnIndexes
     private final Map<ColumnIdentity, Integer> columnIdToRowIdColumnIndex = new HashMap<>();
     // Maps the Iceberg field ids of modified columns to their indexes in the updatedColumns columnValueAndRowIdChannels array
@@ -97,7 +98,6 @@ public class IcebergUpdateablePageSource
     private final int[] outputColumnToDelegateMapping;
     private final int isDeletedColumnId;
     private final int deleteFilePathColumnId;
-    private final int mergeIntoRowIdColumnIndex;
 
     public IcebergUpdateablePageSource(
             Schema tableSchema,
@@ -114,7 +114,7 @@ public class IcebergUpdateablePageSource
             Supplier<IcebergPageSink> updatedRowPageSinkSupplier,
             // the columns that this page source is supposed to update
             List<IcebergColumnHandle> updatedColumns,
-            Optional<IcebergColumnHandle> updateRowIdColumn)
+            Optional<IcebergColumnHandle> rowIdColumn)
     {
         requireNonNull(partitionKeys, "partitionKeys is null");
         this.tableSchema = requireNonNull(tableSchema, "tableSchema is null");
@@ -129,14 +129,15 @@ public class IcebergUpdateablePageSource
         this.updatedRowPageSinkSupplier = requireNonNull(updatedRowPageSinkSupplier, "updatedRowPageSinkSupplier is null");
         this.updatedColumns = requireNonNull(updatedColumns, "updatedColumns is null");
         this.outputColumnToDelegateMapping = new int[columns.size()];
-        this.updateRowIdColumnIndex = updateRowIdColumn.map(columns::indexOf).orElse(-1);
-        this.updateRowIdChildColumnIndexes = updateRowIdColumn
+        this.updateRowIdColumnIndex = rowIdColumn.map(columns::indexOf).orElse(-1);
+        this.mergeTargetTableRowIdColumnIndex = getDelegateColumnId(IcebergColumnHandle::isMergeTargetTableRowIdColumn);
+        this.updateRowIdChildColumnIndexes = rowIdColumn
                 .map(column -> new int[column.getColumnIdentity().getChildren().size()])
                 .orElse(new int[0]);
         Map<ColumnIdentity, Integer> columnToIndex = IntStream.range(0, delegateColumns.size())
                 .boxed()
                 .collect(toImmutableMap(index -> delegateColumns.get(index).getColumnIdentity(), identity()));
-        updateRowIdColumn.ifPresent(column -> {
+        rowIdColumn.ifPresent(column -> {
             List<ColumnIdentity> rowIdFields = column.getColumnIdentity().getChildren();
             for (int i = 0; i < rowIdFields.size(); i++) {
                 ColumnIdentity columnIdentity = rowIdFields.get(i);
@@ -153,7 +154,7 @@ public class IcebergUpdateablePageSource
         }
         for (int i = 0; i < outputColumnToDelegateMapping.length; i++) {
             IcebergColumnHandle outputColumn = outputColumns.get(i);
-            if (outputColumn.isUpdateRowIdColumn() || outputColumn.isMergeRowIdColumn()) {
+            if (outputColumn.isUpdateRowIdColumn() || outputColumn.isMergeTargetTableRowIdColumn()) {
                 continue;
             }
 
@@ -166,7 +167,6 @@ public class IcebergUpdateablePageSource
         }
         this.isDeletedColumnId = getDelegateColumnId(IcebergColumnHandle::isDeletedColumn);
         this.deleteFilePathColumnId = getDelegateColumnId(IcebergColumnHandle::isDeleteFilePathColumn);
-        this.mergeIntoRowIdColumnIndex = getDelegateColumnId(IcebergColumnHandle::isMergeRowIdColumn);
     }
 
     @Override
@@ -201,7 +201,7 @@ public class IcebergUpdateablePageSource
      * {@link IcebergPartitionInsertingPageSource}.
      * 2. Using the newly retrieved page, apply any necessary delete filters.
      * 3. Finally, take the necessary channels from the page with the delete filters applied and
-     * nest them into the updateRowId channel in {@link #setUpdateRowIdBlock(Page)}
+     * nest them into the updateRowId channel in {@link #setRowIdBlock(Page)}
      */
     @Override
     public Page getNextPage()
@@ -232,7 +232,7 @@ public class IcebergUpdateablePageSource
                 dataPage = deleteFilterPredicate.get().filterPage(dataPage);
             }
 
-            return setUpdateRowIdBlock(dataPage);
+            return setRowIdBlock(dataPage);
         }
         catch (RuntimeException e) {
             closeWithSuppression(e);
@@ -327,14 +327,12 @@ public class IcebergUpdateablePageSource
      * @param page The raw Page from the Parquet/ORC reader.
      * @return A Page where the $row_id channel has been populated.
      */
-    private Page setUpdateRowIdBlock(Page page)
+    private Page setRowIdBlock(Page page)
     {
-        // TODO #20578: Update this method to add support for the MERGE RowId.
-
         Block[] fullPage = new Block[columns.size()];
         Block[] rowIdFields;
         Consumer<Integer> loopFunc;
-        if ((updateRowIdColumnIndex == -1 || updatedColumns.isEmpty()) && mergeIntoRowIdColumnIndex == -1) {
+        if ((updateRowIdColumnIndex == -1 || updatedColumns.isEmpty()) && mergeTargetTableRowIdColumnIndex == -1) {
             loopFunc = (channel) -> fullPage[channel] = page.getBlock(outputColumnToDelegateMapping[channel]);
         }
         else {

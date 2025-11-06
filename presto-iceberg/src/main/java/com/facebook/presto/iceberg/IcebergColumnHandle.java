@@ -111,7 +111,7 @@ public class IcebergColumnHandle
     }
 
     @JsonIgnore
-    public boolean isMergeRowIdColumn()
+    public boolean isMergeTargetTableRowIdColumn()
     {
         return columnIdentity.getId() == MERGE_TARGET_ROW_ID_DATA.getId();
     }
