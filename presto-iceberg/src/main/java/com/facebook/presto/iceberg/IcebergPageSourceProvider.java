@@ -365,7 +365,7 @@ public class IcebergPageSourceProvider
                 prestoTypes.add(prestoType);
 
                 if (column.getColumnType() == IcebergColumnHandle.ColumnType.SYNTHESIZED &&
-                        !column.isUpdateRowIdColumn() && !column.isMergeRowIdColumn()) {
+                        !column.isUpdateRowIdColumn() && !column.isMergeTargetTableRowIdColumn()) {
                     Subfield pushedDownSubfield = getPushedDownSubfield(column);
                     List<String> nestedColumnPath = nestedColumnPath(pushedDownSubfield);
                     Optional<ColumnIO> columnIO = findNestedColumnIO(lookupColumnByName(messageColumnIO, pushedDownSubfield.getRootName()), nestedColumnPath);
@@ -760,10 +760,10 @@ public class IcebergPageSourceProvider
 
         Map<Integer, HivePartitionKey> partitionKeys = split.getPartitionKeys();
 
-        // the update row isn't a valid column that can be read from storage.
+        // The update row id and merge target table row id aren't valid columns that can be read from storage.
         // Filter it out from columns passed to the storage page source.
         Set<IcebergColumnHandle> columnsToReadFromStorage = icebergColumns.stream()
-                .filter(not(column -> column.isUpdateRowIdColumn() || column.isMergeRowIdColumn()))
+                .filter(not(column -> column.isUpdateRowIdColumn() || column.isMergeTargetTableRowIdColumn()))
                 .collect(Collectors.toSet());
 
         // add any additional columns which may need to be read from storage
@@ -774,11 +774,11 @@ public class IcebergPageSourceProvider
                 .filter(not(icebergColumns::contains))
                 .forEach(columnsToReadFromStorage::add);
 
-        // finally, add the fields that the update column requires.
-        Optional<IcebergColumnHandle> rowId = icebergColumns.stream()
-                .filter(column -> column.isUpdateRowIdColumn() || column.isMergeRowIdColumn())
+        // finally, add the fields that the UPDATE and MERGE column requires.
+        Optional<IcebergColumnHandle> rowIdColumnHandle = icebergColumns.stream()
+                .filter(column -> column.isUpdateRowIdColumn() || column.isMergeTargetTableRowIdColumn())
                 .findFirst();
-        rowId.ifPresent(rowIdColumn -> {
+        rowIdColumnHandle.ifPresent(rowIdColumn -> {
             Set<Integer> alreadyRequiredColumnIds = columnsToReadFromStorage.stream()
                     .map(IcebergColumnHandle::getId)
                     .collect(toImmutableSet());
@@ -828,7 +828,6 @@ public class IcebergPageSourceProvider
                         split.getStart(),
                         split.getLength(),
                         split.getFileFormat(),
-
                         // TODO #20578: Add the following parameters to the IcebergPageSourceProvider class constructor.
                         //         partitionSpec.specId(),
                         //         split.getPartitionDataJson(),
@@ -844,7 +843,7 @@ public class IcebergPageSourceProvider
             else if (icebergColumn.isDataSequenceNumberColumn()) {
                 metadataValues.put(icebergColumn.getColumnIdentity().getId(), split.getDataSequenceNumber());
             }
-            else if (icebergColumn.isMergeRowIdColumn()) {
+            else if (icebergColumn.isMergeTargetTableRowIdColumn()) {
                 for (ColumnIdentity subColumn : icebergColumn.getColumnIdentity().getChildren()) {
                     if (subColumn.getId() == FILE_PATH.fieldId()) {
                         metadataValues.put(subColumn.getId(), utf8Slice(split.getPath()));
@@ -936,7 +935,7 @@ public class IcebergPageSourceProvider
                 deleteFilters,
                 updatedRowPageSinkSupplier,
                 table.getUpdatedColumns(),
-                rowId);
+                rowIdColumnHandle);
 
         if (split.getChangelogSplitInfo().isPresent()) {
             dataSource = new ChangelogPageSource(dataSource, split.getChangelogSplitInfo().get(), (List<IcebergColumnHandle>) (List<?>) desiredColumns, icebergColumns);
