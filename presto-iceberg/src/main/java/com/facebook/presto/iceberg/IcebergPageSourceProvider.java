@@ -151,7 +151,6 @@ import static com.facebook.presto.iceberg.IcebergErrorCode.ICEBERG_BAD_DATA;
 import static com.facebook.presto.iceberg.IcebergErrorCode.ICEBERG_CANNOT_OPEN_SPLIT;
 import static com.facebook.presto.iceberg.IcebergErrorCode.ICEBERG_MISSING_COLUMN;
 import static com.facebook.presto.iceberg.IcebergErrorCode.ICEBERG_MISSING_DATA;
-import static com.facebook.presto.iceberg.IcebergMetadataColumn.MERGE_FILE_RECORD_COUNT;
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.MERGE_PARTITION_DATA;
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.MERGE_PARTITION_SPEC_ID;
 import static com.facebook.presto.iceberg.IcebergOrcColumn.ROOT_COLUMN_ID;
@@ -254,7 +253,7 @@ public class IcebergPageSourceProvider
             Path path,
             long start,
             long length,
-            /*long fileRecordCount, TODO #20578: Add these parameters to the method signature if necessary.
+            /* TODO #20578: Add these parameters to the method signature if necessary.
             int partitionSpecId,
             String partitionData,*/
             List<IcebergColumnHandle> regularColumns,
@@ -795,13 +794,6 @@ public class IcebergPageSourceProvider
                             IcebergColumnHandle handle = IcebergColumnHandle.create(ROW_POSITION, typeManager, REGULAR);
                             columnsToReadFromStorage.add(handle);
                         }
-                        else if (colId.getId() == MERGE_FILE_RECORD_COUNT.getId()) {
-                            NestedField mergeFileRecordCount = NestedField.required(
-                                    MERGE_FILE_RECORD_COUNT.getId(), MERGE_FILE_RECORD_COUNT.getColumnName(),
-                                    Types.LongType.get());
-                            IcebergColumnHandle handle = IcebergColumnHandle.create(mergeFileRecordCount, typeManager, REGULAR);
-                            columnsToReadFromStorage.add(handle);
-                        }
                         else if (colId.getId() == MERGE_PARTITION_SPEC_ID.getId()) {
                             NestedField mergePartitionSpecId = NestedField.required(
                                     MERGE_PARTITION_SPEC_ID.getId(), MERGE_PARTITION_SPEC_ID.getColumnName(),
@@ -838,7 +830,6 @@ public class IcebergPageSourceProvider
                         split.getFileFormat(),
 
                         // TODO #20578: Add the following parameters to the IcebergPageSourceProvider class constructor.
-                        //         split.getFileRecordCount(),
                         //         partitionSpec.specId(),
                         //         split.getPartitionDataJson(),
                         columnList,
@@ -858,14 +849,10 @@ public class IcebergPageSourceProvider
                     if (subColumn.getId() == FILE_PATH.fieldId()) {
                         metadataValues.put(subColumn.getId(), utf8Slice(split.getPath()));
                     }
-                    else if (subColumn.getId() == MERGE_FILE_RECORD_COUNT.getId()) {
-                        metadataValues.put(subColumn.getId(), split.getDataSequenceNumber()); // TODO #20578: Is getDataSequenceNumber() the correct value?
-                    }
                     else if (subColumn.getId() == MERGE_PARTITION_SPEC_ID.getId()) {
                         metadataValues.put(subColumn.getId(), (long) partitionSpec.specId());
                     }
                     else if (subColumn.getId() == MERGE_PARTITION_DATA.getId()) {
-                        // TODO #20578: Is "split.getPartitionDataJson()" the correct value? Should we use "partitionDataFromJson(partitionSpec, split.getPartitionDataJson())"?
                         Optional<String> partitionDataJson = split.getPartitionDataJson();
                         metadataValues.put(subColumn.getId(), partitionDataJson.isPresent() ? utf8Slice(partitionDataJson.get()) : EMPTY_SLICE);
                     }
@@ -1084,7 +1071,6 @@ public class IcebergPageSourceProvider
             List<IcebergColumnHandle> dataColumns,
             TupleDomain<IcebergColumnHandle> predicate,
             boolean isCacheable/*, TODO #20578: Add these parameters to the method signature:
-            long fileRecordCount,
             int partitionSpecId,
             String partitionData,*/)
     {
