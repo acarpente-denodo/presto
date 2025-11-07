@@ -226,8 +226,7 @@ class RelationPlanner
             ImmutableList.Builder<VariableReferenceExpression> outputVariablesBuilder = ImmutableList.builder();
             ImmutableMap.Builder<VariableReferenceExpression, ColumnHandle> columns = ImmutableMap.builder();
             for (Field field : scope.getRelationType().getAllFields()) {
-                // TODO #20578: Check the consequences of adding .orElse("field") in field.getName().
-                VariableReferenceExpression variable = variableAllocator.newVariable(getSourceLocation(node), field.getName().orElse("field"), field.getType());
+                VariableReferenceExpression variable = variableAllocator.newVariable(getSourceLocation(node), field.getName().get(), field.getType());
                 outputVariablesBuilder.add(variable);
                 columns.put(variable, analysis.getColumn(field));
             }
