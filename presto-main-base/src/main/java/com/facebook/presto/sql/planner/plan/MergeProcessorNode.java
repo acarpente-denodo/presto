@@ -37,7 +37,7 @@ public class MergeProcessorNode
 {
     private final PlanNode source;
     private final MergeTarget target;
-    private final VariableReferenceExpression rowIdVariable;
+    private final VariableReferenceExpression targetTableRowIdColumnVariable;
     private final VariableReferenceExpression mergeRowVariable;
     private final List<VariableReferenceExpression> targetColumnVariables;
     private final List<VariableReferenceExpression> targetRedistributionColumnVariables;
@@ -49,13 +49,13 @@ public class MergeProcessorNode
             @JsonProperty("id") PlanNodeId id,
             @JsonProperty("source") PlanNode source,
             @JsonProperty("target") MergeTarget target,
-            @JsonProperty("rowIdVariable") VariableReferenceExpression rowIdVariable,
+            @JsonProperty("targetTableRowIdColumnVariable") VariableReferenceExpression targetTableRowIdColumnVariable,
             @JsonProperty("mergeRowVariable") VariableReferenceExpression mergeRowVariable,
             @JsonProperty("targetColumnVariables") List<VariableReferenceExpression> targetColumnVariables,
             @JsonProperty("targetRedistributionColumnVariables") List<VariableReferenceExpression> targetRedistributionColumnVariables,
             @JsonProperty("outputs") List<VariableReferenceExpression> outputs)
     {
-        this(sourceLocation, id, Optional.empty(), source, target, rowIdVariable, mergeRowVariable, targetColumnVariables, targetRedistributionColumnVariables, outputs);
+        this(sourceLocation, id, Optional.empty(), source, target, targetTableRowIdColumnVariable, mergeRowVariable, targetColumnVariables, targetRedistributionColumnVariables, outputs);
     }
 
     public MergeProcessorNode(
@@ -64,7 +64,7 @@ public class MergeProcessorNode
             Optional<PlanNode> statsEquivalentPlanNode,
             PlanNode source,
             MergeTarget target,
-            VariableReferenceExpression rowIdVariable,
+            VariableReferenceExpression targetTableRowIdColumnVariable,
             VariableReferenceExpression mergeRowVariable,
             List<VariableReferenceExpression> targetColumnVariables,
             List<VariableReferenceExpression> targetRedistributionColumnVariables,
@@ -75,7 +75,7 @@ public class MergeProcessorNode
         this.source = requireNonNull(source, "source is null");
         this.target = requireNonNull(target, "target is null");
         this.mergeRowVariable = requireNonNull(mergeRowVariable, "mergeRowVariable is null");
-        this.rowIdVariable = requireNonNull(rowIdVariable, "rowIdVariable is null");
+        this.targetTableRowIdColumnVariable = requireNonNull(targetTableRowIdColumnVariable, "targetTableRowIdColumnVariable is null");
         this.targetColumnVariables = requireNonNull(targetColumnVariables, "targetColumnVariables is null");
         this.targetRedistributionColumnVariables = requireNonNull(targetRedistributionColumnVariables, "targetRedistributionColumnVariables is null");
         this.outputs = ImmutableList.copyOf(requireNonNull(outputs, "outputs is null"));
@@ -100,9 +100,9 @@ public class MergeProcessorNode
     }
 
     @JsonProperty
-    public VariableReferenceExpression getRowIdVariable()
+    public VariableReferenceExpression getTargetTableRowIdColumnVariable()
     {
-        return rowIdVariable;
+        return targetTableRowIdColumnVariable;
     }
 
     @JsonProperty
@@ -140,13 +140,13 @@ public class MergeProcessorNode
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         return new MergeProcessorNode(getSourceLocation(), getId(), Iterables.getOnlyElement(newChildren),
-                target, rowIdVariable, mergeRowVariable, targetColumnVariables, targetRedistributionColumnVariables, outputs);
+                target, targetTableRowIdColumnVariable, mergeRowVariable, targetColumnVariables, targetRedistributionColumnVariables, outputs);
     }
 
     @Override
     public PlanNode assignStatsEquivalentPlanNode(Optional<PlanNode> statsEquivalentPlanNode)
     {
         return new MergeProcessorNode(getSourceLocation(), getId(), statsEquivalentPlanNode, source, target,
-                rowIdVariable, mergeRowVariable, targetColumnVariables, targetRedistributionColumnVariables, outputs);
+                targetTableRowIdColumnVariable, mergeRowVariable, targetColumnVariables, targetRedistributionColumnVariables, outputs);
     }
 }

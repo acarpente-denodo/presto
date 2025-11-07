@@ -110,7 +110,7 @@ public final class MergePage
             for (int i = 0; i < dataColumnCount; i++) {
                 columns[i] = i;
             }
-            columns[dataColumnCount] = dataColumnCount + 1; // Merge Target Row ID channel
+            columns[dataColumnCount] = dataColumnCount + 1; // Merge Target Table Row ID channel
             deletePage = Optional.of(inputPage
                     .extractChannels(columns)
                     .getPositions(deletePositions, 0, deletePositionCount));

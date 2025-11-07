@@ -2137,12 +2137,12 @@ class StatementAnalyzer
 
             boolean isMergeIntoStatement = statement instanceof Merge && ((Merge) statement).getTargetTable().equals(table);
             if (isMergeIntoStatement) {
-                // Add the merge target table row id field
-                ColumnHandle targetRowIdColumnHandle = metadata.getMergeTargetTableRowIdColumnHandle(session, tableHandle.get());
-                Type targetRowIdType = metadata.getColumnMetadata(session, tableHandle.get(), targetRowIdColumnHandle).getType();
-                Field targetRowIdField = Field.newUnqualified(Optional.empty(), Optional.empty(), targetRowIdType);
-                fields.add(targetRowIdField);
-                analysis.setColumn(targetRowIdField, targetRowIdColumnHandle);
+                // Add the target table row id field used to process the MERGE command.
+                ColumnHandle targetTableRowIdColumnHandle = metadata.getMergeTargetTableRowIdColumnHandle(session, tableHandle.get());
+                Type targetTableRowIdType = metadata.getColumnMetadata(session, tableHandle.get(), targetTableRowIdColumnHandle).getType();
+                Field targetTableRowIdField = Field.newUnqualified(Optional.empty(), Optional.empty(), targetTableRowIdType);
+                fields.add(targetTableRowIdField);
+                analysis.setColumn(targetTableRowIdField, targetTableRowIdColumnHandle);
             }
 
             analysis.registerTable(table, tableHandle.get());
@@ -2172,9 +2172,10 @@ class StatementAnalyzer
             Scope tableScope = createAndAssignScope(table, scope, outputFields);
 
             if (isMergeIntoStatement) {
-                FieldReference mergeRowIdFieldReference = new FieldReference(outputFields.size() - 1);
-                analyzeExpression(mergeRowIdFieldReference, tableScope);
-                analysis.setRowIdField(table, mergeRowIdFieldReference);
+                // Set the target table row id field reference used to process the MERGE command.
+                FieldReference targetTableRowIdFieldReference = new FieldReference(outputFields.size() - 1);
+                analyzeExpression(targetTableRowIdFieldReference, tableScope);
+                analysis.setRowIdField(table, targetTableRowIdFieldReference);
             }
 
             return tableScope;

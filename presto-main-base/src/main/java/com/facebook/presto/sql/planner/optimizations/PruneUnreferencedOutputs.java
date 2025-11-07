@@ -550,7 +550,7 @@ public class PruneUnreferencedOutputs
         public PlanNode visitMergeProcessor(MergeProcessorNode node, RewriteContext<Set<VariableReferenceExpression>> context)
         {
             Set<VariableReferenceExpression> expectedInputs = ImmutableSet.<VariableReferenceExpression>builder()
-                    .add(node.getRowIdVariable())
+                    .add(node.getTargetTableRowIdColumnVariable())
                     .add(node.getMergeRowVariable())
                     .build();
 
@@ -562,7 +562,7 @@ public class PruneUnreferencedOutputs
                     node.getStatsEquivalentPlanNode(),
                     source,
                     node.getTarget(),
-                    node.getRowIdVariable(),
+                    node.getTargetTableRowIdColumnVariable(),
                     node.getMergeRowVariable(),
                     node.getTargetColumnVariables(),
                     node.getTargetRedistributionColumnVariables(),

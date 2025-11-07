@@ -599,17 +599,17 @@ public final class TableWriterNode
     {
         private final RowChangeParadigm paradigm;
         private final List<Type> columnTypes;
-        private final Type rowIdType;
+        private final Type targetTableRowIdColumnType;
 
         @JsonCreator
         public MergeParadigmAndTypes(
                 @JsonProperty("paradigm") RowChangeParadigm paradigm,
                 @JsonProperty("columnTypes") List<Type> columnTypes,
-                @JsonProperty("rowIdType") Type rowIdType)
+                @JsonProperty("targetTableRowIdColumnType") Type targetTableRowIdColumnType)
         {
             this.paradigm = requireNonNull(paradigm, "paradigm is null");
             this.columnTypes = requireNonNull(columnTypes, "columnTypes is null");
-            this.rowIdType = requireNonNull(rowIdType, "rowIdType is null");
+            this.targetTableRowIdColumnType = requireNonNull(targetTableRowIdColumnType, "targetTableRowIdColumnType is null");
         }
 
         @JsonProperty
@@ -625,9 +625,9 @@ public final class TableWriterNode
         }
 
         @JsonProperty
-        public Type getRowIdType()
+        public Type getTargetTableRowIdColumnType()
         {
-            return rowIdType;
+            return targetTableRowIdColumnType;
         }
     }
 }

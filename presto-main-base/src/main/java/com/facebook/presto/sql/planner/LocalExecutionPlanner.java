@@ -2792,7 +2792,7 @@ public class LocalExecutionPlanner
 
             Map<VariableReferenceExpression, Integer> nodeLayout = makeLayout(node);
             Map<VariableReferenceExpression, Integer> sourceLayout = makeLayout(node.getSource());
-            int rowIdChannel = sourceLayout.get(node.getRowIdVariable());
+            int rowIdChannel = sourceLayout.get(node.getTargetTableRowIdColumnVariable());
             int mergeRowChannel = sourceLayout.get(node.getMergeRowVariable());
 
             List<Integer> redistributionColumns = node.getTargetRedistributionColumnVariables().stream()

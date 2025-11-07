@@ -501,7 +501,7 @@ public class UnaliasSymbolReferences
                     node.getStatsEquivalentPlanNode(),
                     context.rewrite(node.getSource()),
                     node.getTarget(),
-                    node.getRowIdVariable(),
+                    node.getTargetTableRowIdColumnVariable(),
                     node.getMergeRowVariable(),
                     node.getTargetColumnVariables(),
                     node.getTargetRedistributionColumnVariables(),

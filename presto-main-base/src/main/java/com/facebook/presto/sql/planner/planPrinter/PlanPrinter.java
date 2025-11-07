@@ -1290,7 +1290,7 @@ public class PlanPrinter
             NodeRepresentation nodeOutput = addNode(node, "MergeProcessor", identifier);
             nodeOutput.appendDetails("target: %s", node.getTarget());
             nodeOutput.appendDetails("merge row column: %s", node.getMergeRowVariable());
-            nodeOutput.appendDetails("row id column: %s", node.getRowIdVariable());
+            nodeOutput.appendDetails("target table row id column: %s", node.getTargetTableRowIdColumnVariable());
             nodeOutput.appendDetails("redistribution columns: %s", node.getTargetRedistributionColumnVariables());
             nodeOutput.appendDetails("data columns: %s", node.getTargetColumnVariables());
 
