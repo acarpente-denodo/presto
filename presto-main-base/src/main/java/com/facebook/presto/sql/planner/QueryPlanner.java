@@ -494,8 +494,8 @@ class QueryPlanner
                 .process(mergeStmt.getTarget(), sqlPlannerContext);
 
         // Assign a unique id to every target table row
-        VariableReferenceExpression targetUniqueIdVariable = variableAllocator.newVariable("unique_id", BIGINT);
-        AssignUniqueId assignUniqueRowIdToTargetTable = new AssignUniqueId(getSourceLocation(mergeStmt), idAllocator.getNextId(), targetTableRelationPlan.getRoot(), targetUniqueIdVariable);
+        VariableReferenceExpression targetUniqueIdColumnVariable = variableAllocator.newVariable("unique_id", BIGINT);
+        AssignUniqueId assignUniqueRowIdToTargetTable = new AssignUniqueId(getSourceLocation(mergeStmt), idAllocator.getNextId(), targetTableRelationPlan.getRoot(), targetUniqueIdColumnVariable);
         RelationPlan relationPlanWithUniqueRowIds = new RelationPlan(
                 assignUniqueRowIdToTargetTable,
                 mergeAnalysis.getTargetTableScope(),
@@ -554,7 +554,7 @@ class QueryPlanner
             joinResultBuilder.add(new GenericLiteral("INTEGER", String.valueOf(caseNumber)));
 
             // Build the match condition for the MERGE case
-            SymbolReference targetUniqueIdColumnSymbolReference = createSymbolReference(targetUniqueIdVariable);
+            SymbolReference targetUniqueIdColumnSymbolReference = createSymbolReference(targetUniqueIdColumnVariable);
             Expression mergeCondition = mergeCase instanceof MergeInsert ?
                     new IsNullPredicate(targetUniqueIdColumnSymbolReference) : new IsNotNullPredicate(targetUniqueIdColumnSymbolReference);
 
@@ -575,10 +575,10 @@ class QueryPlanner
 
         RowType mergeRowType = createMergeRowType(mergeAnalysis.getTargetColumnsMetadata());
         Table targetTable = mergeAnalysis.getTargetTable();
-        FieldReference targetRowIdReference = analysis.getRowIdField(targetTable);
+        FieldReference targetTableRowIdReference = analysis.getRowIdField(targetTable);
 
-        VariableReferenceExpression targetRowIdVariable = relationPlanWithUniqueRowIds.getFieldMappings().get(targetRowIdReference.getFieldIndex());
-        VariableReferenceExpression mergeRowVariable = variableAllocator.newVariable("merge_row", mergeRowType);
+        VariableReferenceExpression targetTableRowIdColumnVariable = relationPlanWithUniqueRowIds.getFieldMappings().get(targetTableRowIdReference.getFieldIndex());
+        VariableReferenceExpression mergeRowColumnVariable = variableAllocator.newVariable("merge_row", mergeRowType);
 
         // Project the partitioning variables, the merge_row, the rowId, and the unique_id variable.
         Assignments.Builder projectionAssignmentsBuilder = Assignments.builder();
@@ -588,9 +588,9 @@ class QueryPlanner
             projectionAssignmentsBuilder.put(variable, variable);
         }
 
-        projectionAssignmentsBuilder.put(targetUniqueIdVariable, targetUniqueIdVariable);
-        projectionAssignmentsBuilder.put(targetRowIdVariable, targetRowIdVariable);
-        projectionAssignmentsBuilder.put(mergeRowVariable, rowExpression(caseExpression, sqlPlannerContext));
+        projectionAssignmentsBuilder.put(targetUniqueIdColumnVariable, targetUniqueIdColumnVariable);
+        projectionAssignmentsBuilder.put(targetTableRowIdColumnVariable, targetTableRowIdColumnVariable);
+        projectionAssignmentsBuilder.put(mergeRowColumnVariable, rowExpression(caseExpression, sqlPlannerContext));
 
         ProjectNode joinSubPlanProject = new ProjectNode(
                 idAllocator.getNextId(),
@@ -599,7 +599,7 @@ class QueryPlanner
 
         // Now add a column for the case_number, gotten from the merge_row
         SubscriptExpression caseNumberExpression = new SubscriptExpression(
-                createSymbolReference(mergeRowVariable), new LongLiteral(Long.toString(mergeRowType.getFields().size())));
+                createSymbolReference(mergeRowColumnVariable), new LongLiteral(Long.toString(mergeRowType.getFields().size())));
 
         VariableReferenceExpression caseNumberVariable = variableAllocator.newVariable("case_number", INTEGER);
 
@@ -617,13 +617,13 @@ class QueryPlanner
         VariableReferenceExpression isDistinctVariable = variableAllocator.newVariable("is_distinct", BOOLEAN);
         MarkDistinctNode markDistinctNode = new MarkDistinctNode(
                 getSourceLocation(mergeStmt), idAllocator.getNextId(), joinProjectNode, isDistinctVariable,
-                ImmutableList.of(targetUniqueIdVariable, caseNumberVariable), Optional.empty());
+                ImmutableList.of(targetUniqueIdColumnVariable, caseNumberVariable), Optional.empty());
 
         // Raise an error if unique_id variable is non-null and the unique_id/case_number combination was not distinct
         Expression multipleMatchesExpression = new IfExpression(
                 LogicalBinaryExpression.and(
                         new NotExpression(createSymbolReference(isDistinctVariable)),
-                        new IsNotNullPredicate(createSymbolReference(targetUniqueIdVariable))),
+                        new IsNotNullPredicate(createSymbolReference(targetUniqueIdColumnVariable))),
                 new Cast(
                         new FunctionCall(
                                 QualifiedName.of("presto", "default", "fail"),
@@ -641,7 +641,7 @@ class QueryPlanner
 
         TableHandle targetTableHandle = analysis.getTableHandle(targetTable);
         RowChangeParadigm rowChangeParadigm = metadata.getRowChangeParadigm(session, targetTableHandle);
-        Type rowIdType = analysis.getType(analysis.getRowIdField(targetTable));
+        Type targetTableRowIdColumnType = analysis.getType(analysis.getRowIdField(targetTable));
         TableMetadata targetTableMetadata = metadata.getTableMetadata(session, targetTableHandle);
 
         List<Type> targetColumnsDataTypes = targetTableMetadata.getMetadata().getColumns().stream()
@@ -650,7 +650,7 @@ class QueryPlanner
                 .collect(toImmutableList());
 
         TableWriterNode.MergeParadigmAndTypes mergeParadigmAndTypes =
-                new TableWriterNode.MergeParadigmAndTypes(rowChangeParadigm, targetColumnsDataTypes, rowIdType);
+                new TableWriterNode.MergeParadigmAndTypes(rowChangeParadigm, targetColumnsDataTypes, targetTableRowIdColumnType);
 
         Optional<MergeHandle> mergeHandle = Optional.of(metadata.beginMerge(session, targetTableHandle));
         TableWriterNode.MergeTarget mergeTarget =
@@ -683,7 +683,7 @@ class QueryPlanner
         List<VariableReferenceExpression> mergeProjectedVariables = ImmutableList.<VariableReferenceExpression>builder()
                 .addAll(mergeColumnVariables)
                 .add(mergeOperationVariable)
-                .add(targetRowIdVariable)
+                .add(targetTableRowIdColumnVariable)
                 .add(insertFromUpdateVariable)
                 .build();
 
@@ -692,8 +692,8 @@ class QueryPlanner
                 idAllocator.getNextId(),
                 filterMultipleMatches,
                 mergeTarget,
-                targetRowIdVariable,
-                mergeRowVariable,
+                targetTableRowIdColumnVariable,
+                mergeRowColumnVariable,
                 mergeColumnVariables,
                 mergeRedistributionVariablesBuilder.build(),
                 mergeProjectedVariables);
@@ -703,7 +703,7 @@ class QueryPlanner
                 mergeColumnVariables,
                 mergeAnalysis.getInsertPartitioningArgumentIndexes(),
                 mergeAnalysis.getUpdateLayout(),
-                targetRowIdVariable,
+                targetTableRowIdColumnVariable,
                 mergeOperationVariable);
 
         List<VariableReferenceExpression> mergeWriterOutputs = ImmutableList.of(
@@ -781,7 +781,7 @@ class QueryPlanner
             List<VariableReferenceExpression> variables,
             List<Integer> insertPartitioningArgumentIndexes,
             Optional<PartitioningHandle> updateLayout,
-            VariableReferenceExpression rowIdVariable,
+            VariableReferenceExpression targetTableRowIdColumnVariable,
             VariableReferenceExpression operationVariable)
     {
         if (!insertLayout.isPresent() && !updateLayout.isPresent()) {
@@ -800,7 +800,7 @@ class QueryPlanner
         });
 
         Optional<PartitioningScheme> updatePartitioning = updateLayout.map(handle ->
-                new PartitioningScheme(Partitioning.create(handle, ImmutableList.of(rowIdVariable)), ImmutableList.of(rowIdVariable)));
+                new PartitioningScheme(Partitioning.create(handle, ImmutableList.of(targetTableRowIdColumnVariable)), ImmutableList.of(targetTableRowIdColumnVariable)));
 
         PartitioningHandle partitioningHandle = new PartitioningHandle(
                 Optional.empty(),

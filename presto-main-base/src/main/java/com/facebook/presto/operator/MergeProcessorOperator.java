@@ -77,7 +77,7 @@ public class MergeProcessorOperator
                 case DELETE_ROW_AND_INSERT_ROW:
                     return new DeleteAndInsertMergeProcessor(
                             merge.getColumnTypes(),
-                            merge.getRowIdType(),
+                            merge.getTargetTableRowIdColumnType(),
                             rowIdChannel,
                             mergeRowChannel,
                             redistributionColumnChannels,

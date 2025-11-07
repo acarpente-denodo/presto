@@ -671,9 +671,9 @@ public final class ValidateDependenciesChecker
             PlanNode source = node.getSource();
             source.accept(this, boundSymbols); // visit child
 
-            checkArgument(source.getOutputVariables().contains(node.getRowIdVariable()),
+            checkArgument(source.getOutputVariables().contains(node.getTargetTableRowIdColumnVariable()),
                     "Invalid node. rowId symbol (%s) is not in source plan output (%s)",
-                    node.getRowIdVariable(), node.getSource().getOutputVariables());
+                    node.getTargetTableRowIdColumnVariable(), node.getSource().getOutputVariables());
             checkArgument(source.getOutputVariables().contains(node.getMergeRowVariable()),
                     "Invalid node. Merge row symbol (%s) is not in source plan output (%s)",
                     node.getMergeRowVariable(), node.getSource().getOutputVariables());

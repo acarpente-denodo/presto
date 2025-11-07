@@ -323,7 +323,7 @@ public class SymbolMapper
                 node.getId(),
                 source,
                 node.getTarget(),
-                map(node.getRowIdVariable()),
+                map(node.getTargetTableRowIdColumnVariable()),
                 map(node.getMergeRowVariable()),
                 map(node.getTargetColumnVariables()),
                 map(node.getTargetRedistributionColumnVariables()),
