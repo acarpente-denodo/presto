@@ -2140,7 +2140,7 @@ class StatementAnalyzer
                 // Add the target table row id field used to process the MERGE command.
                 ColumnHandle targetTableRowIdColumnHandle = metadata.getMergeTargetTableRowIdColumnHandle(session, tableHandle.get());
                 Type targetTableRowIdType = metadata.getColumnMetadata(session, tableHandle.get(), targetTableRowIdColumnHandle).getType();
-                Field targetTableRowIdField = Field.newUnqualified(Optional.empty(), Optional.empty(), targetTableRowIdType);
+                Field targetTableRowIdField = Field.newUnqualified(Optional.empty(), "$target_table_row_id", targetTableRowIdType);
                 fields.add(targetTableRowIdField);
                 analysis.setColumn(targetTableRowIdField, targetTableRowIdColumnHandle);
             }
@@ -3257,14 +3257,15 @@ class StatementAnalyzer
             Map<String, Integer> fieldIndexes = new HashMap<>();
             RelationType targetRelationType = targetTableScope.getRelationType();
             for (Field targetField : targetRelationType.getAllFields()) {
-                // Only the rowId column handle will have no name, and we want to skip that column
-                targetField.getName().ifPresent(targetFieldName -> {
-                    int targetFieldIndex = targetRelationType.indexOf(targetField);
-                    ColumnHandle targetColumnHandle = targetAllColumnHandles.get(targetFieldName);
-                    verify(targetColumnHandle != null, "targetAllColumnHandles does not contain the named handle: %s", targetFieldName);
-                    columnHandleFieldNumbersBuilder.put(targetColumnHandle, targetFieldIndex);
-                    fieldIndexes.put(targetFieldName, targetFieldIndex);
-                });
+                targetField.getName()
+                        .filter(targetFieldName -> !"$target_table_row_id".equals(targetFieldName)) // Skip "$target_table_row_id" column.
+                        .ifPresent(targetFieldName -> {
+                            int targetFieldIndex = targetRelationType.indexOf(targetField);
+                            ColumnHandle targetColumnHandle = targetAllColumnHandles.get(targetFieldName);
+                            verify(targetColumnHandle != null, "targetAllColumnHandles does not contain the named handle: %s", targetFieldName);
+                            columnHandleFieldNumbersBuilder.put(targetColumnHandle, targetFieldIndex);
+                            fieldIndexes.put(targetFieldName, targetFieldIndex);
+                        });
             }
             Map<ColumnHandle, Integer> columnHandleFieldNumbers = columnHandleFieldNumbersBuilder.buildOrThrow();
 
