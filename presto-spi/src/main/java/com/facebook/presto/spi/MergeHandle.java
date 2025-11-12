@@ -13,6 +13,9 @@
  */
 package com.facebook.presto.spi;
 
+import com.facebook.drift.annotations.ThriftConstructor;
+import com.facebook.drift.annotations.ThriftField;
+import com.facebook.drift.annotations.ThriftStruct;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -20,12 +23,14 @@ import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
+@ThriftStruct
 public final class MergeHandle
 {
     private final TableHandle tableHandle;
     private final ConnectorMergeTableHandle connectorMergeTableHandle;
 
     @JsonCreator
+    @ThriftConstructor
     public MergeHandle(
             @JsonProperty("tableHandle") TableHandle tableHandle,
             @JsonProperty("connectorMergeTableHandle") ConnectorMergeTableHandle connectorMergeTableHandle)
@@ -35,12 +40,14 @@ public final class MergeHandle
     }
 
     @JsonProperty
+    @ThriftField(1)
     public TableHandle getTableHandle()
     {
         return tableHandle;
     }
 
     @JsonProperty
+    @ThriftField(2)
     public ConnectorMergeTableHandle getConnectorMergeTableHandle()
     {
         return connectorMergeTableHandle;

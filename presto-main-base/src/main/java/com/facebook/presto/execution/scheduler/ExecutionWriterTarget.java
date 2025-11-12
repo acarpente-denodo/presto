@@ -230,6 +230,7 @@ public abstract class ExecutionWriterTarget
         }
     }
 
+    @ThriftStruct
     public static class MergeHandle
             extends ExecutionWriterTarget
     {
@@ -239,6 +240,7 @@ public abstract class ExecutionWriterTarget
 //        private final ConnectorMergeTableHandle connectorMergeTableHandle;
 
         @JsonCreator
+        @ThriftConstructor
         public MergeHandle(
                 @JsonProperty("handle") com.facebook.presto.spi.MergeHandle handle)
 //                @JsonProperty("schemaTableName") SchemaTableName schemaTableName,
@@ -250,6 +252,7 @@ public abstract class ExecutionWriterTarget
         }
 
         @JsonProperty
+        @ThriftField(1)
         public com.facebook.presto.spi.MergeHandle getHandle()
         {
             return handle;

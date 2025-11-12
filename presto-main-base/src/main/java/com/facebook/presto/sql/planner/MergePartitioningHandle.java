@@ -60,13 +60,13 @@ public final class MergePartitioningHandle
         checkArgument(insertPartitioning.isPresent() || updatePartitioning.isPresent(), "insert or update partitioning must be present");
     }
 
-    @JsonProperty("insertPartitioning")
+    @JsonProperty
     public Optional<PartitioningScheme> getInsertPartitioning()
     {
         return insertPartitioning;
     }
 
-    @JsonProperty("updatePartitioning")
+    @JsonProperty
     public Optional<PartitioningScheme> getUpdatePartitioning()
     {
         return updatePartitioning;

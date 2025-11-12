@@ -137,7 +137,7 @@ public class HandleResolver
 
     public String getId(ConnectorMergeTableHandle mergeHandle)
     {
-        return getId(mergeHandle, MaterializedHandleResolver::getMergeHandleClass);
+        return getId(mergeHandle, MaterializedHandleResolver::getMergeTableHandleClass);
     }
 
     public Class<? extends ConnectorTableHandle> getTableHandleClass(String id)
@@ -180,9 +180,9 @@ public class HandleResolver
         return resolverFor(id).getDeleteTableHandleClass().orElseThrow(() -> new IllegalArgumentException("No resolver for " + id));
     }
 
-    public Class<? extends ConnectorMergeTableHandle> getMergeHandleClass(String id)
+    public Class<? extends ConnectorMergeTableHandle> getMergeTableHandleClass(String id)
     {
-        return resolverFor(id).getMergeHandleClass().orElseThrow(() -> new IllegalArgumentException("No resolver for " + id));
+        return resolverFor(id).getMergeTableHandleClass().orElseThrow(() -> new IllegalArgumentException("No resolver for " + id));
     }
 
     public Class<? extends ConnectorPartitioningHandle> getPartitioningHandleClass(String id)
@@ -321,7 +321,7 @@ public class HandleResolver
             return deleteTableHandle;
         }
 
-        public Optional<Class<? extends ConnectorMergeTableHandle>> getMergeHandleClass()
+        public Optional<Class<? extends ConnectorMergeTableHandle>> getMergeTableHandleClass()
         {
             return mergeTableHandle;
         }
