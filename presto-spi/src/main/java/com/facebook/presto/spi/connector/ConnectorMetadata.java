@@ -622,16 +622,6 @@ public interface ConnectorMetadata
     }
 
     /**
-     * Get the physical layout for updated rows of a MERGE operation.
-     * Inserted rows are handled by {@link #getInsertLayout}.
-     * This layout always uses the {@link #getMergeTargetTableRowIdColumnHandle merge target table row ID column}.
-     */
-    default Optional<ConnectorPartitioningHandle> getMergeUpdateLayout(ConnectorSession session, ConnectorTableHandle tableHandle)
-    {
-        return Optional.empty();
-    }
-
-    /**
      * Do whatever is necessary to start an MERGE query, returning the {@link ConnectorMergeTableHandle}
      * instance that will be passed to the PageSink, and to the {@link #finishMerge} method.
      */

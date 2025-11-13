@@ -14,7 +14,6 @@
 package com.facebook.presto.sql.planner.plan;
 
 import com.facebook.presto.spi.SourceLocation;
-import com.facebook.presto.spi.plan.PartitioningScheme;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.plan.TableWriterNode.MergeTarget;
@@ -37,7 +36,6 @@ public class MergeWriterNode
     private final PlanNode source;
     private final MergeTarget target;
     private final List<VariableReferenceExpression> mergeProcessorProjectedVariables;
-    private final Optional<PartitioningScheme> partitioningScheme;
     private final List<VariableReferenceExpression> outputs;
 
     @JsonCreator
@@ -47,10 +45,9 @@ public class MergeWriterNode
             @JsonProperty("source") PlanNode source,
             @JsonProperty("target") MergeTarget target,
             @JsonProperty("mergeProcessorProjectedVariables") List<VariableReferenceExpression> mergeProcessorProjectedVariables,
-            @JsonProperty("partitioningScheme") Optional<PartitioningScheme> partitioningScheme,
             @JsonProperty("outputs") List<VariableReferenceExpression> outputs)
     {
-        this(sourceLocation, id, Optional.empty(), source, target, mergeProcessorProjectedVariables, partitioningScheme, outputs);
+        this(sourceLocation, id, Optional.empty(), source, target, mergeProcessorProjectedVariables, outputs);
     }
 
     public MergeWriterNode(
@@ -60,7 +57,6 @@ public class MergeWriterNode
             PlanNode source,
             MergeTarget target,
             List<VariableReferenceExpression> mergeProcessorProjectedVariables,
-            Optional<PartitioningScheme> partitioningScheme,
             List<VariableReferenceExpression> outputs)
     {
         super(sourceLocation, id, statsEquivalentPlanNode);
@@ -68,7 +64,6 @@ public class MergeWriterNode
         this.source = requireNonNull(source, "source is null");
         this.target = requireNonNull(target, "target is null");
         this.mergeProcessorProjectedVariables = requireNonNull(mergeProcessorProjectedVariables, "mergeProcessorProjectedVariables is null");
-        this.partitioningScheme = requireNonNull(partitioningScheme, "partitioningScheme is null");
         this.outputs = ImmutableList.copyOf(requireNonNull(outputs, "outputs is null"));
     }
 
@@ -88,12 +83,6 @@ public class MergeWriterNode
     public List<VariableReferenceExpression> getMergeProcessorProjectedVariables()
     {
         return mergeProcessorProjectedVariables;
-    }
-
-    @JsonProperty
-    public Optional<PartitioningScheme> getPartitioningScheme()
-    {
-        return partitioningScheme;
     }
 
     @Override
@@ -119,13 +108,13 @@ public class MergeWriterNode
     public PlanNode assignStatsEquivalentPlanNode(Optional<PlanNode> statsEquivalentPlanNode)
     {
         return new MergeWriterNode(getSourceLocation(), getId(), statsEquivalentPlanNode, source, target,
-                mergeProcessorProjectedVariables, partitioningScheme, outputs);
+                mergeProcessorProjectedVariables, outputs);
     }
 
     @Override
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         return new MergeWriterNode(getSourceLocation(), getId(), Iterables.getOnlyElement(newChildren),
-                target, mergeProcessorProjectedVariables, partitioningScheme, outputs);
+                target, mergeProcessorProjectedVariables, outputs);
     }
 }

@@ -427,12 +427,6 @@ public abstract class DelegatingMetadataManager
     }
 
     @Override
-    public Optional<PartitioningHandle> getMergeUpdateLayout(Session session, TableHandle tableHandle)
-    {
-        return delegate.getMergeUpdateLayout(session, tableHandle);
-    }
-
-    @Override
     public MergeHandle beginMerge(Session session, TableHandle tableHandle)
     {
         return delegate.beginMerge(session, tableHandle);

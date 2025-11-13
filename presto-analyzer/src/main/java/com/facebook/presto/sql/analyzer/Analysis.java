@@ -22,7 +22,6 @@ import com.facebook.presto.spi.ColumnHandle;
 import com.facebook.presto.spi.ColumnMetadata;
 import com.facebook.presto.spi.ConnectorId;
 import com.facebook.presto.spi.MaterializedViewDefinition;
-import com.facebook.presto.spi.NewTableLayout;
 import com.facebook.presto.spi.TableHandle;
 import com.facebook.presto.spi.analyzer.AccessControlInfo;
 import com.facebook.presto.spi.analyzer.AccessControlInfoForTable;
@@ -35,7 +34,6 @@ import com.facebook.presto.spi.function.FunctionHandle;
 import com.facebook.presto.spi.function.FunctionKind;
 import com.facebook.presto.spi.function.table.Argument;
 import com.facebook.presto.spi.function.table.ConnectorTableFunctionHandle;
-import com.facebook.presto.spi.plan.PartitioningHandle;
 import com.facebook.presto.spi.security.AccessControl;
 import com.facebook.presto.spi.security.AccessControlContext;
 import com.facebook.presto.spi.security.AllowAllAccessControl;
@@ -1785,13 +1783,9 @@ public class Analysis
         private final Table targetTable;
         private final List<ColumnMetadata> targetColumnsMetadata;
         private final List<ColumnHandle> targetColumnHandles;
-        private final List<ColumnHandle> targetRedistributionColumnHandles;
         private final List<List<ColumnHandle>> mergeCaseColumnHandles;
         private final Set<ColumnHandle> nonNullableColumnHandles;
         private final Map<ColumnHandle, Integer> columnHandleFieldNumbers;
-        private final List<Integer> insertPartitioningArgumentIndexes;
-        private final Optional<NewTableLayout> insertLayout;
-        private final Optional<PartitioningHandle> updateLayout;
         private final Scope targetTableScope;
         private final Scope joinScope;
 
@@ -1799,26 +1793,18 @@ public class Analysis
                 Table targetTable,
                 List<ColumnMetadata> targetColumnsMetadata,
                 List<ColumnHandle> targetColumnHandles,
-                List<ColumnHandle> targetRedistributionColumnHandles,
                 List<List<ColumnHandle>> mergeCaseColumnHandles,
                 Set<ColumnHandle> nonNullableTargetColumnHandles,
                 Map<ColumnHandle, Integer> targetColumnHandleFieldNumbers,
-                List<Integer> insertPartitioningArgumentIndexes,
-                Optional<NewTableLayout> insertLayout,
-                Optional<PartitioningHandle> updateLayout,
                 Scope targetTableScope,
                 Scope joinScope)
         {
             this.targetTable = requireNonNull(targetTable, "targetTable is null");
             this.targetColumnsMetadata = requireNonNull(targetColumnsMetadata, "targetColumnsMetadata is null");
             this.targetColumnHandles = requireNonNull(targetColumnHandles, "targetColumnHandles is null");
-            this.targetRedistributionColumnHandles = requireNonNull(targetRedistributionColumnHandles, "targetRedistributionColumnHandles is null");
             this.mergeCaseColumnHandles = requireNonNull(mergeCaseColumnHandles, "mergeCaseColumnHandles is null");
             this.nonNullableColumnHandles = requireNonNull(nonNullableTargetColumnHandles, "nonNullableTargetColumnHandles is null");
             this.columnHandleFieldNumbers = requireNonNull(targetColumnHandleFieldNumbers, "targetColumnHandleFieldNumbers is null");
-            this.insertLayout = requireNonNull(insertLayout, "insertLayout is null");
-            this.updateLayout = requireNonNull(updateLayout, "updateLayout is null");
-            this.insertPartitioningArgumentIndexes = (requireNonNull(insertPartitioningArgumentIndexes, "insertPartitioningArgumentIndexes is null"));
             this.targetTableScope = requireNonNull(targetTableScope, "targetTableScope is null");
             this.joinScope = requireNonNull(joinScope, "joinScope is null");
         }
@@ -1838,11 +1824,6 @@ public class Analysis
             return targetColumnHandles;
         }
 
-        public List<ColumnHandle> getTargetRedistributionColumnHandles()
-        {
-            return targetRedistributionColumnHandles;
-        }
-
         public List<List<ColumnHandle>> getMergeCaseColumnHandles()
         {
             return mergeCaseColumnHandles;
@@ -1856,21 +1837,6 @@ public class Analysis
         public Map<ColumnHandle, Integer> getColumnHandleFieldNumbers()
         {
             return columnHandleFieldNumbers;
-        }
-
-        public List<Integer> getInsertPartitioningArgumentIndexes()
-        {
-            return insertPartitioningArgumentIndexes;
-        }
-
-        public Optional<NewTableLayout> getInsertLayout()
-        {
-            return insertLayout;
-        }
-
-        public Optional<PartitioningHandle> getUpdateLayout()
-        {
-            return updateLayout;
         }
 
         public Scope getJoinScope()

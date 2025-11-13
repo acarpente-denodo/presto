@@ -24,7 +24,6 @@ import com.facebook.presto.metadata.Metadata;
 import com.facebook.presto.spi.ColumnHandle;
 import com.facebook.presto.spi.ColumnMetadata;
 import com.facebook.presto.spi.MergeHandle;
-import com.facebook.presto.spi.NewTableLayout;
 import com.facebook.presto.spi.PrestoException;
 import com.facebook.presto.spi.TableHandle;
 import com.facebook.presto.spi.TableMetadata;
@@ -42,9 +41,6 @@ import com.facebook.presto.spi.plan.LimitNode;
 import com.facebook.presto.spi.plan.MarkDistinctNode;
 import com.facebook.presto.spi.plan.Ordering;
 import com.facebook.presto.spi.plan.OrderingScheme;
-import com.facebook.presto.spi.plan.Partitioning;
-import com.facebook.presto.spi.plan.PartitioningHandle;
-import com.facebook.presto.spi.plan.PartitioningScheme;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.plan.PlanNodeIdAllocator;
@@ -155,7 +151,6 @@ import static com.facebook.presto.sql.planner.PlannerUtils.newVariable;
 import static com.facebook.presto.sql.planner.PlannerUtils.toOrderingScheme;
 import static com.facebook.presto.sql.planner.PlannerUtils.toSortOrder;
 import static com.facebook.presto.sql.planner.PlannerUtils.toVariableReference;
-import static com.facebook.presto.sql.planner.SystemPartitioningHandle.FIXED_HASH_DISTRIBUTION;
 import static com.facebook.presto.sql.planner.TranslateExpressionsUtil.analyzeCallExpressionTypes;
 import static com.facebook.presto.sql.planner.TranslateExpressionsUtil.toRowExpression;
 import static com.facebook.presto.sql.planner.optimizations.WindowNodeUtil.toBoundType;
@@ -582,12 +577,6 @@ class QueryPlanner
 
         // Project the partitioning variables, the merge_row, the rowId, and the unique_id variable.
         Assignments.Builder projectionAssignmentsBuilder = Assignments.builder();
-        for (ColumnHandle column : mergeAnalysis.getTargetRedistributionColumnHandles()) {
-            int fieldIndex = requireNonNull(mergeAnalysis.getColumnHandleFieldNumbers().get(column), "Could not find fieldIndex for redistribution column");
-            VariableReferenceExpression variable = relationPlanWithUniqueRowIds.getFieldMappings().get(fieldIndex);
-            projectionAssignmentsBuilder.put(variable, variable);
-        }
-
         projectionAssignmentsBuilder.put(targetUniqueIdColumnVariable, targetUniqueIdColumnVariable);
         projectionAssignmentsBuilder.put(targetTableRowIdColumnVariable, targetTableRowIdColumnVariable);
         projectionAssignmentsBuilder.put(mergeRowColumnVariable, rowExpression(caseExpression, sqlPlannerContext));
@@ -663,12 +652,6 @@ class QueryPlanner
         }
         List<VariableReferenceExpression> mergeColumnVariables = mergeColumnVariablesBuilder.build();
 
-        ImmutableList.Builder<VariableReferenceExpression> mergeRedistributionVariablesBuilder = ImmutableList.builder();
-        for (ColumnHandle columnHandle : mergeAnalysis.getTargetRedistributionColumnHandles()) {
-            int fieldIndex = requireNonNull(mergeAnalysis.getColumnHandleFieldNumbers().get(columnHandle), "Could not find field number for column handle");
-            mergeRedistributionVariablesBuilder.add(relationPlanWithUniqueRowIds.getFieldMappings().get(fieldIndex));
-        }
-
         // Variable to specify whether the MERGE INTO statement should insert a new row or update an existing one.
         // Operations defined in ConnectorMergeSink: INSERT_OPERATION_NUMBER and UPDATE_OPERATION_NUMBER.
         VariableReferenceExpression mergeOperationVariable = variableAllocator.newVariable("operation", TINYINT);
@@ -695,16 +678,7 @@ class QueryPlanner
                 targetTableRowIdColumnVariable,
                 mergeRowColumnVariable,
                 mergeColumnVariables,
-                mergeRedistributionVariablesBuilder.build(),
                 mergeProjectedVariables);
-
-        Optional<PartitioningScheme> mergeWriterPartitioningScheme = createMergePartitioningScheme(
-                mergeAnalysis.getInsertLayout(),
-                mergeColumnVariables,
-                mergeAnalysis.getInsertPartitioningArgumentIndexes(),
-                mergeAnalysis.getUpdateLayout(),
-                targetTableRowIdColumnVariable,
-                mergeOperationVariable);
 
         List<VariableReferenceExpression> mergeWriterOutputs = ImmutableList.of(
                 variableAllocator.newVariable("partialrows", BIGINT),
@@ -716,7 +690,6 @@ class QueryPlanner
                 mergeProcessorNode,
                 mergeTarget,
                 mergeProjectedVariables,
-                mergeWriterPartitioningScheme,
                 mergeWriterOutputs);
     }
 
@@ -774,50 +747,6 @@ class QueryPlanner
         fields.add(new RowType.Field(Optional.empty(), TINYINT)); // operation_number
         fields.add(new RowType.Field(Optional.empty(), INTEGER)); // case_number
         return RowType.from(fields);
-    }
-
-    public static Optional<PartitioningScheme> createMergePartitioningScheme(
-            Optional<NewTableLayout> insertLayout,
-            List<VariableReferenceExpression> variables,
-            List<Integer> insertPartitioningArgumentIndexes,
-            Optional<PartitioningHandle> updateLayout,
-            VariableReferenceExpression targetTableRowIdColumnVariable,
-            VariableReferenceExpression operationVariable)
-    {
-        if (!insertLayout.isPresent() && !updateLayout.isPresent()) {
-            return Optional.empty();
-        }
-
-        Optional<PartitioningScheme> insertPartitioning = insertLayout.map(layout -> {
-            List<VariableReferenceExpression> arguments = insertPartitioningArgumentIndexes.stream()
-                    .map(variables::get)
-                    .collect(toImmutableList());
-
-            return layout.getPartitioning()
-                    .map(handle -> new PartitioningScheme(Partitioning.create(handle, arguments), variables))
-                    // empty connector partitioning handle means evenly partitioning on partitioning columns
-                    .orElseGet(() -> new PartitioningScheme(Partitioning.create(FIXED_HASH_DISTRIBUTION, arguments), variables));
-        });
-
-        Optional<PartitioningScheme> updatePartitioning = updateLayout.map(handle ->
-                new PartitioningScheme(Partitioning.create(handle, ImmutableList.of(targetTableRowIdColumnVariable)), ImmutableList.of(targetTableRowIdColumnVariable)));
-
-        PartitioningHandle partitioningHandle = new PartitioningHandle(
-                Optional.empty(),
-                Optional.empty(),
-                new MergePartitioningHandle(insertPartitioning, updatePartitioning));
-
-        List<VariableReferenceExpression> combinedVariables = new ArrayList<>();
-        combinedVariables.add(operationVariable);
-        insertPartitioning.ifPresent(scheme -> combinedVariables.addAll(partitioningVariables(scheme)));
-        updatePartitioning.ifPresent(scheme -> combinedVariables.addAll(partitioningVariables(scheme)));
-
-        return Optional.of(new PartitioningScheme(Partitioning.create(partitioningHandle, combinedVariables), combinedVariables));
-    }
-
-    private static List<VariableReferenceExpression> partitioningVariables(PartitioningScheme scheme)
-    {
-        return new ArrayList<>(scheme.getPartitioning().getVariableReferences());
     }
 
     public static Expression coerceIfNecessary(Analysis analysis, Expression original, Expression rewritten)

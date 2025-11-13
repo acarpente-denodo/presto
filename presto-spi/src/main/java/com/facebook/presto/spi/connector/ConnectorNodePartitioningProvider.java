@@ -20,7 +20,6 @@ import com.facebook.presto.spi.ConnectorSplit;
 import com.facebook.presto.spi.Node;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.function.ToIntFunction;
 
 import static com.facebook.presto.spi.connector.NotPartitionedPartitionHandle.NOT_PARTITIONED;
@@ -45,7 +44,7 @@ public interface ConnectorNodePartitioningProvider
         return singletonList(NOT_PARTITIONED);
     }
 
-    Optional<ConnectorBucketNodeMap> getBucketNodeMap(
+    ConnectorBucketNodeMap getBucketNodeMap(
             ConnectorTransactionHandle transactionHandle,
             ConnectorSession session,
             ConnectorPartitioningHandle partitioningHandle,

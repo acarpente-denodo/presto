@@ -367,11 +367,6 @@ public interface Metadata
     ColumnHandle getMergeTargetTableRowIdColumnHandle(Session session, TableHandle tableHandle);
 
     /**
-     * Get the physical layout for updated rows of a MERGE operation.
-     */
-    Optional<PartitioningHandle> getMergeUpdateLayout(Session session, TableHandle tableHandle);
-
-    /**
      * Begin merge query
      */
     MergeHandle beginMerge(Session session, TableHandle tableHandle);

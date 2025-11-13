@@ -2795,9 +2795,6 @@ public class LocalExecutionPlanner
             int rowIdChannel = sourceLayout.get(node.getTargetTableRowIdColumnVariable());
             int mergeRowChannel = sourceLayout.get(node.getMergeRowVariable());
 
-            List<Integer> redistributionColumns = node.getTargetRedistributionColumnVariables().stream()
-                    .map(nodeLayout::get)
-                    .collect(toImmutableList());
             List<Integer> targetColumnChannels = node.getTargetColumnVariables().stream()
                     .map(nodeLayout::get)
                     .collect(toImmutableList());
@@ -2808,7 +2805,6 @@ public class LocalExecutionPlanner
                     node.getTarget().getMergeParadigmAndTypes(),
                     rowIdChannel,
                     mergeRowChannel,
-                    redistributionColumns,
                     targetColumnChannels);
 
             return new PhysicalOperation(operatorFactory, nodeLayout, context, source);

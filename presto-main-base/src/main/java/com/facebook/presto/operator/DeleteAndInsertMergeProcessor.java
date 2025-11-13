@@ -41,35 +41,19 @@ public class DeleteAndInsertMergeProcessor
     private final int targetTableRowIdChannel;
     private final int mergeRowChannel;
     private final List<Integer> targetColumnChannels;
-    private final int redistributionColumnCount;
-    private final List<Integer> redistributionChannelNumbers;
 
     public DeleteAndInsertMergeProcessor(
             List<Type> targetColumnTypes,
             Type rowIdType,
             int targetTableRowIdChannel,
             int mergeRowChannel,
-            List<Integer> redistributionChannelNumbers,
             List<Integer> targetColumnChannels)
     {
         this.targetColumnTypes = requireNonNull(targetColumnTypes, "targetColumnTypes is null");
         this.rowIdType = requireNonNull(rowIdType, "rowIdType is null");
         this.targetTableRowIdChannel = targetTableRowIdChannel;
         this.mergeRowChannel = mergeRowChannel;
-        this.redistributionColumnCount = redistributionChannelNumbers.size();
-        int redistributionSourceIndex = 0;
         this.targetColumnChannels = requireNonNull(targetColumnChannels, "targetColumnChannels is null");
-        ImmutableList.Builder<Integer> redistributionChannelNumbersBuilder = ImmutableList.builder();
-        for (int dataColumnChannel : targetColumnChannels) {
-            if (redistributionChannelNumbers.contains(dataColumnChannel)) {
-                redistributionChannelNumbersBuilder.add(redistributionSourceIndex);
-                redistributionSourceIndex++;
-            }
-            else {
-                redistributionChannelNumbersBuilder.add(-1);
-            }
-        }
-        this.redistributionChannelNumbers = redistributionChannelNumbersBuilder.build();
     }
 
     @JsonProperty
@@ -93,7 +77,7 @@ public class DeleteAndInsertMergeProcessor
     {
         requireNonNull(inputPage, "inputPage is null");
         int inputChannelCount = inputPage.getChannelCount();
-        checkArgument(inputChannelCount >= 2 + redistributionColumnCount, "inputPage channelCount (%s) should be >= 2 + partition columns size (%s)", inputChannelCount, redistributionColumnCount);
+        checkArgument(inputChannelCount >= 2, "inputPage channelCount (%s) should be >= 2", inputChannelCount);
 
         int originalPositionCount = inputPage.getPositionCount();
         checkArgument(originalPositionCount > 0, "originalPositionCount should be > 0, but is %s", originalPositionCount);
@@ -153,20 +137,10 @@ public class DeleteAndInsertMergeProcessor
 
     private void addDeleteRow(PageBuilder pageBuilder, Page originalPage, int position)
     {
-        // Copy the write redistribution columns
+        // Delete doesn't care about the data columns.
         for (int targetChannel : targetColumnChannels) {
-            Type columnType = targetColumnTypes.get(targetChannel);
             BlockBuilder targetBlock = pageBuilder.getBlockBuilder(targetChannel);
-
-            int redistributionChannelNumber = redistributionChannelNumbers.get(targetChannel);
-            if (redistributionChannelNumbers.get(targetChannel) >= 0) {
-                // The value comes from that column of the page
-                columnType.appendTo(originalPage.getBlock(redistributionChannelNumber), position, targetBlock);
-            }
-            else {
-                // We don't care about the other data columns
-                targetBlock.appendNull();
-            }
+            targetBlock.appendNull();
         }
 
         // Add the operation column == deleted

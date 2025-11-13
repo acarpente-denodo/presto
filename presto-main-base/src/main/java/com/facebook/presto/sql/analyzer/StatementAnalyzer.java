@@ -42,7 +42,6 @@ import com.facebook.presto.spi.ColumnMetadata;
 import com.facebook.presto.spi.ConnectorId;
 import com.facebook.presto.spi.MaterializedViewDefinition;
 import com.facebook.presto.spi.MaterializedViewStatus;
-import com.facebook.presto.spi.NewTableLayout;
 import com.facebook.presto.spi.PrestoException;
 import com.facebook.presto.spi.PrestoWarning;
 import com.facebook.presto.spi.SchemaTableName;
@@ -72,7 +71,6 @@ import com.facebook.presto.spi.function.table.ScalarArgumentSpecification;
 import com.facebook.presto.spi.function.table.TableArgument;
 import com.facebook.presto.spi.function.table.TableArgumentSpecification;
 import com.facebook.presto.spi.function.table.TableFunctionAnalysis;
-import com.facebook.presto.spi.plan.PartitioningHandle;
 import com.facebook.presto.spi.relation.DomainTranslator;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.security.AccessControl;
@@ -3133,26 +3131,17 @@ class StatementAnalyzer
                     .filter(column -> !column.isHidden())
                     .collect(toImmutableList());
 
-            Optional<NewTableLayout> targetInsertLayout = metadata.getInsertLayout(session, targetTableHandle);
-
             Map<String, ColumnHandle> targetAllColumnHandles = metadata.getColumnHandles(session, targetTableHandle);
             ImmutableList.Builder<ColumnHandle> targetColumnHandlesBuilder = ImmutableList.builder();
             ImmutableSet.Builder<String> targetColumnNamesBuilder = ImmutableSet.builder();
-            ImmutableList.Builder<ColumnHandle> targetRedistributionColumnHandlesBuilder = ImmutableList.builder();
-            Set<String> targetPartitioningColumnNames = ImmutableSet.copyOf(targetInsertLayout.map(NewTableLayout::getPartitionColumns).orElse(ImmutableList.of()));
             for (ColumnMetadata columnMetadata : targetColumnsMetadata) {
                 String targetColumnName = columnMetadata.getName();
                 ColumnHandle targetColumnHandle = targetAllColumnHandles.get(targetColumnName);
                 targetColumnHandlesBuilder.add(targetColumnHandle);
                 targetColumnNamesBuilder.add(targetColumnName);
-                if (targetPartitioningColumnNames.contains(targetColumnName)) {
-                    targetRedistributionColumnHandlesBuilder.add(targetColumnHandle);
-                }
             }
             List<ColumnHandle> targetColumnHandles = targetColumnHandlesBuilder.build();
             Set<String> targetColumnNames = targetColumnNamesBuilder.build();
-            // The "targetRedistributionColumnHandles" is a list that contains the columns from the target table that are also present in the partitioning columns.
-            List<ColumnHandle> targetRedistributionColumnHandles = targetRedistributionColumnHandlesBuilder.build();
 
             Map<String, Type> targetColumnTypes = targetColumnsMetadata.stream().collect(toImmutableMap(ColumnMetadata::getName, ColumnMetadata::getType));
 
@@ -3252,8 +3241,6 @@ class StatementAnalyzer
 
             List<List<ColumnHandle>> mergeCaseColumnHandles = buildMergeCaseColumnLists(merge, targetColumnsMetadata, targetAllColumnHandles);
 
-            Optional<PartitioningHandle> mergeUpdateLayout = metadata.getMergeUpdateLayout(session, targetTableHandle);
-
             ImmutableMap.Builder<ColumnHandle, Integer> columnHandleFieldNumbersBuilder = ImmutableMap.builder();
             Map<String, Integer> fieldIndexes = new HashMap<>();
             RelationType targetRelationType = targetTableScope.getRelationType();
@@ -3270,10 +3257,6 @@ class StatementAnalyzer
             }
             Map<ColumnHandle, Integer> columnHandleFieldNumbers = columnHandleFieldNumbersBuilder.buildOrThrow();
 
-            List<Integer> insertPartitioningArgumentIndexes = targetPartitioningColumnNames.stream()
-                    .map(fieldIndexes::get)
-                    .collect(toImmutableList());
-
             Set<ColumnHandle> nonNullableColumnHandles = metadata.getTableMetadata(session, targetTableHandle).getColumns().stream()
                     .filter(column -> !column.isNullable())
                     .map(ColumnMetadata::getName)
@@ -3284,13 +3267,9 @@ class StatementAnalyzer
                     targetTable,
                     targetColumnsMetadata,
                     targetColumnHandles,
-                    targetRedistributionColumnHandles,
                     mergeCaseColumnHandles,
                     nonNullableColumnHandles,
                     columnHandleFieldNumbers,
-                    insertPartitioningArgumentIndexes,
-                    targetInsertLayout,
-                    mergeUpdateLayout,
                     targetTableScope,
                     joinScope));
 

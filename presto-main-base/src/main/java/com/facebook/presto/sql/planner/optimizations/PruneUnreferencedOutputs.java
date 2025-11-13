@@ -542,7 +542,6 @@ public class PruneUnreferencedOutputs
                     source,
                     node.getTarget(),
                     node.getMergeProcessorProjectedVariables(),
-                    node.getPartitioningScheme(),
                     node.getOutputVariables());
         }
 
@@ -565,7 +564,6 @@ public class PruneUnreferencedOutputs
                     node.getTargetTableRowIdColumnVariable(),
                     node.getMergeRowVariable(),
                     node.getTargetColumnVariables(),
-                    node.getTargetRedistributionColumnVariables(),
                     node.getOutputVariables());
         }
 

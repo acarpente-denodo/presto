@@ -620,7 +620,6 @@ public class PlanBuilder
                 mergeSource,
                 mergeTarget(schemaTableName),
                 inputSymbols,
-                Optional.empty(),
                 outputSymbols);
     }
 
