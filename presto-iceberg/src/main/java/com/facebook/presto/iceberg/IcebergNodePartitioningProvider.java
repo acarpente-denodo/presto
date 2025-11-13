@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.facebook.presto.pinot;
+package com.facebook.presto.iceberg;
 
 import com.facebook.presto.common.type.Type;
 import com.facebook.presto.spi.BucketFunction;
@@ -22,12 +22,19 @@ import com.facebook.presto.spi.connector.ConnectorBucketNodeMap;
 import com.facebook.presto.spi.connector.ConnectorNodePartitioningProvider;
 import com.facebook.presto.spi.connector.ConnectorPartitioningHandle;
 import com.facebook.presto.spi.connector.ConnectorTransactionHandle;
+import org.apache.iceberg.Schema;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.function.ToIntFunction;
 
-public class PinotNodePartitioningProvider
+import static com.facebook.presto.iceberg.IcebergUtil.schemaFromHandles;
+import static com.facebook.presto.iceberg.PartitionFields.parsePartitionFields;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
+// TODO #20578: WIP - Class implementation under development. Check Trino's IcebergNodePartitioningProvider for reference.
+
+public class IcebergNodePartitioningProvider
         implements ConnectorNodePartitioningProvider
 {
     @Override
@@ -37,16 +44,7 @@ public class PinotNodePartitioningProvider
             ConnectorPartitioningHandle partitioningHandle,
             List<Node> sortedNodes)
     {
-        return Optional.of(ConnectorBucketNodeMap.createBucketNodeMap(1));
-    }
-
-    @Override
-    public ToIntFunction<ConnectorSplit> getSplitBucketFunction(
-            ConnectorTransactionHandle transactionHandle,
-            ConnectorSession session,
-            ConnectorPartitioningHandle partitioningHandle)
-    {
-        return value -> 0;
+        return Optional.empty();
     }
 
     @Override
@@ -57,12 +55,37 @@ public class PinotNodePartitioningProvider
             List<Type> partitionChannelTypes,
             int bucketCount)
     {
-        return null;
+        if (partitioningHandle instanceof IcebergUpdateHandle) {
+            return new IcebergUpdateBucketFunction(bucketCount);
+        }
+
+        IcebergPartitioningHandle handle = (IcebergPartitioningHandle) partitioningHandle;
+        Schema schema = schemaFromHandles(handle.getPartitioningColumns());
+        return new IcebergBucketFunction(
+                // TODO #20578: Check if the value of the following line and compare it with the value contained in the parameter "partitionChannelTypes".
+                handle.getPartitioningColumns().stream()
+                        .map(IcebergColumnHandle::getType)
+                        .collect(toImmutableList()),
+                parsePartitionFields(schema, handle.getPartitioning()),
+                handle.getPartitioningColumns(),
+                bucketCount);
     }
 
     @Override
     public int getBucketCount(ConnectorTransactionHandle transactionHandle, ConnectorSession session, ConnectorPartitioningHandle partitioningHandle)
     {
-        return 1;
+        return 0;
+    }
+
+    @Override
+    public ToIntFunction<ConnectorSplit> getSplitBucketFunction(
+            ConnectorTransactionHandle transactionHandle,
+            ConnectorSession session,
+            ConnectorPartitioningHandle partitioningHandle)
+    {
+        return split -> {
+            // Not currently used, likely because IcebergMetadata.getTableProperties currently does not expose partitioning.
+            throw new UnsupportedOperationException();
+        };
     }
 }

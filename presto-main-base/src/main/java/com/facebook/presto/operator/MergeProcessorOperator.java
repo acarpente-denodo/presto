@@ -56,9 +56,10 @@ public class MergeProcessorOperator
                 MergeParadigmAndTypes merge,
                 int rowIdChannel,
                 int mergeRowChannel,
+                List<Integer> redistributionColumns,
                 List<Integer> targetColumnChannels)
         {
-            MergeRowChangeProcessor rowChangeProcessor = createRowChangeProcessor(merge, rowIdChannel, mergeRowChannel, targetColumnChannels);
+            MergeRowChangeProcessor rowChangeProcessor = createRowChangeProcessor(merge, rowIdChannel, mergeRowChannel, redistributionColumns, targetColumnChannels);
 
             this.operatorId = operatorId;
             this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
@@ -69,6 +70,7 @@ public class MergeProcessorOperator
                 MergeParadigmAndTypes merge,
                 int rowIdChannel,
                 int mergeRowChannel,
+                List<Integer> redistributionColumnChannels,
                 List<Integer> targetColumnChannels)
         {
             switch (merge.getParadigm()) {
@@ -78,12 +80,14 @@ public class MergeProcessorOperator
                             merge.getTargetTableRowIdColumnType(),
                             rowIdChannel,
                             mergeRowChannel,
+                            redistributionColumnChannels,
                             targetColumnChannels);
                 case CHANGE_ONLY_UPDATED_COLUMNS:
                     return new ChangeOnlyUpdatedColumnsMergeProcessor(
                             rowIdChannel,
                             mergeRowChannel,
-                            targetColumnChannels);
+                            targetColumnChannels,
+                            redistributionColumnChannels);
                 default:
                     throw new PrestoException(NOT_SUPPORTED, "Merge paradigm not supported: " + merge.getParadigm());
             }
