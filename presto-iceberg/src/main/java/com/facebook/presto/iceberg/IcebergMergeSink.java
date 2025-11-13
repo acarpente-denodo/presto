@@ -26,8 +26,10 @@ import com.facebook.presto.spi.ConnectorPageSink;
 import com.facebook.presto.spi.ConnectorSession;
 import com.facebook.presto.spi.connector.MergePage;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.airlift.slice.Slice;
 import org.apache.iceberg.PartitionSpec;
+import org.apache.iceberg.Schema;
 import org.apache.iceberg.io.LocationProvider;
 import org.roaringbitmap.longlong.ImmutableLongBitmapDataProvider;
 import org.roaringbitmap.longlong.LongBitmapDataProvider;
@@ -59,6 +61,9 @@ public class IcebergMergeSink
     private final JsonCodec<CommitTaskData> jsonCodec;
     private final ConnectorSession session;
     private final FileFormat fileFormat;
+    private final Map<String, String> storageProperties;
+    private final Schema schema;
+//    private final Map<Integer, PartitionSpec> partitionsSpecs; // TODO #20578: Should we use "partitionsSpec" or "partitionsSpecs" like Trino does?
     private final PartitionSpec partitionsSpec;
     private final ConnectorPageSink insertPageSink;
     private final int columnCount;
@@ -71,6 +76,8 @@ public class IcebergMergeSink
             JsonCodec<CommitTaskData> jsonCodec,
             ConnectorSession session,
             FileFormat fileFormat,
+            Map<String, String> storageProperties,
+            Schema schema,
             PartitionSpec partitionsSpec,
             ConnectorPageSink insertPageSink,
             int columnCount)
@@ -81,6 +88,9 @@ public class IcebergMergeSink
         this.jsonCodec = requireNonNull(jsonCodec, "jsonCodec is null");
         this.session = requireNonNull(session, "session is null");
         this.fileFormat = requireNonNull(fileFormat, "fileFormat is null");
+        this.storageProperties = ImmutableMap.copyOf(requireNonNull(storageProperties, "storageProperties is null"));
+        this.schema = requireNonNull(schema, "schema is null");
+//        this.partitionsSpec = ImmutableMap.copyOf(requireNonNull(partitionsSpec, "partitionsSpecs is null"));  // TODO #20578: Should we use "partitionsSpec" or "partitionsSpecs" like Trino does?
         this.partitionsSpec = requireNonNull(partitionsSpec, "partitionsSpecs is null");
         this.insertPageSink = requireNonNull(insertPageSink, "insertPageSink is null");
         this.columnCount = columnCount;
@@ -128,6 +138,7 @@ public class IcebergMergeSink
         fileDeletions.forEach((dataFilePath, deletion) -> {
             ConnectorPageSink sink = createPositionDeletePageSink(
                     dataFilePath.toStringUtf8(),
+//                    partitionsSpecs.get(deletion.partitionSpecId()),  // TODO #20578: original Trino method parameter value.
                     partitionsSpec,
                     deletion.partitionDataJson());
 
