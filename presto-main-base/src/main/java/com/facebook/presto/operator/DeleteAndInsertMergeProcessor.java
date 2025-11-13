@@ -38,7 +38,7 @@ public class DeleteAndInsertMergeProcessor
 {
     private final List<Type> targetColumnTypes;
     private final Type rowIdType;
-    private final int rowIdChannel;
+    private final int targetTableRowIdChannel;
     private final int mergeRowChannel;
     private final List<Integer> targetColumnChannels;
     private final int redistributionColumnCount;
@@ -47,14 +47,14 @@ public class DeleteAndInsertMergeProcessor
     public DeleteAndInsertMergeProcessor(
             List<Type> targetColumnTypes,
             Type rowIdType,
-            int rowIdChannel,
+            int targetTableRowIdChannel,
             int mergeRowChannel,
             List<Integer> redistributionChannelNumbers,
             List<Integer> targetColumnChannels)
     {
         this.targetColumnTypes = requireNonNull(targetColumnTypes, "targetColumnTypes is null");
         this.rowIdType = requireNonNull(rowIdType, "rowIdType is null");
-        this.rowIdChannel = rowIdChannel;
+        this.targetTableRowIdChannel = targetTableRowIdChannel;
         this.mergeRowChannel = mergeRowChannel;
         this.redistributionColumnCount = redistributionChannelNumbers.size();
         int redistributionSourceIndex = 0;
@@ -82,11 +82,11 @@ public class DeleteAndInsertMergeProcessor
      * Transform UPDATE operations into an INSERT and DELETE operation.
      * See {@link MergeRowChangeProcessor#transformPage} for details.
      * @param inputPage It has 5 channels/blocks:<br>
-     *                                 1. Unique ID<br>
-     *                                 2. Merge Row ID (_file:varchar, _pos:bigint, file_record_count:bigint, partition_spec_id:integer, partition_data:varchar)<br>
-     *                                 3. Merge Row (source table columns, is present, operation, case number)<br>
-     *                                 4. Merge case number<br>
-     *                                 5. Is distinct row: it is 1 if no other row has the same unique id and WHEN clause number, 0 otherwise.<br>
+     *                  1. Unique ID<br>
+     *                  2. Target Table Row ID (_file:varchar, _pos:bigint, file_record_count:bigint, partition_spec_id:integer, partition_data:varchar)<br>
+     *                  3. Merge Row (source table columns, operation, case number)<br>
+     *                  4. Merge case number<br>
+     *                  5. Is distinct row: it is 1 if no other row has the same unique id and WHEN clause number, 0 otherwise.<br>
      */
     @Override
     public Page transformPage(Page inputPage)
@@ -172,8 +172,8 @@ public class DeleteAndInsertMergeProcessor
         // Add the operation column == deleted
         TINYINT.writeLong(pageBuilder.getBlockBuilder(targetColumnChannels.size()), DELETE_OPERATION_NUMBER);
 
-        // Copy row ID column
-        rowIdType.appendTo(originalPage.getBlock(rowIdChannel), position, pageBuilder.getBlockBuilder(targetColumnChannels.size() + 1));
+        // Copy target table row ID column
+        rowIdType.appendTo(originalPage.getBlock(targetTableRowIdChannel), position, pageBuilder.getBlockBuilder(targetColumnChannels.size() + 1));
 
         // Write 0, meaning this row is not an insert derived from an update
         TINYINT.writeLong(pageBuilder.getBlockBuilder(targetColumnChannels.size() + 2), 0);
@@ -194,7 +194,7 @@ public class DeleteAndInsertMergeProcessor
         // Add the operation column == insert
         TINYINT.writeLong(pageBuilder.getBlockBuilder(targetColumnChannels.size()), INSERT_OPERATION_NUMBER);
 
-        // Add null row ID column
+        // Add null target table row ID column
         pageBuilder.getBlockBuilder(targetColumnChannels.size() + 1).appendNull();
 
         // Write 1 if this row is an insert derived from an update, 0 otherwise
