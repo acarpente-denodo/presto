@@ -481,6 +481,7 @@ public class UnaliasSymbolReferences
                     context.rewrite(node.getSource()),
                     node.getTarget(),
                     node.getMergeProcessorProjectedVariables(),
+                    node.getPartitioningScheme(),
                     node.getOutputVariables());
         }
 
@@ -503,6 +504,7 @@ public class UnaliasSymbolReferences
                     node.getTargetTableRowIdColumnVariable(),
                     node.getMergeRowVariable(),
                     node.getTargetColumnVariables(),
+                    node.getTargetRedistributionColumnVariables(),
                     node.getOutputVariables());
         }
 

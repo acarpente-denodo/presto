@@ -812,7 +812,9 @@ public class AddExchanges
         {
             PlanWithProperties source = node.getSource().accept(this, preferredProperties);
 
-            PlanWithProperties partitionedSource = getWriterPlanWithProperties(Optional.empty(), source, false);
+            Optional<PartitioningScheme> partitioningScheme = node.getPartitioningScheme();
+            boolean isSingleWriterPerPartitionRequired = partitioningScheme.isPresent() && !partitioningScheme.get().isScaleWriters();
+            PlanWithProperties partitionedSource = getWriterPlanWithProperties(partitioningScheme, source, isSingleWriterPerPartitionRequired);
 
             return rebaseAndDeriveProperties(node, partitionedSource);
         }

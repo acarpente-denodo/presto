@@ -40,6 +40,7 @@ public class MergeProcessorNode
     private final VariableReferenceExpression targetTableRowIdColumnVariable;
     private final VariableReferenceExpression mergeRowVariable;
     private final List<VariableReferenceExpression> targetColumnVariables;
+    private final List<VariableReferenceExpression> targetRedistributionColumnVariables;
     private final List<VariableReferenceExpression> outputs;
 
     @JsonCreator
@@ -51,9 +52,10 @@ public class MergeProcessorNode
             @JsonProperty("targetTableRowIdColumnVariable") VariableReferenceExpression targetTableRowIdColumnVariable,
             @JsonProperty("mergeRowVariable") VariableReferenceExpression mergeRowVariable,
             @JsonProperty("targetColumnVariables") List<VariableReferenceExpression> targetColumnVariables,
+            @JsonProperty("targetRedistributionColumnVariables") List<VariableReferenceExpression> targetRedistributionColumnVariables,
             @JsonProperty("outputs") List<VariableReferenceExpression> outputs)
     {
-        this(sourceLocation, id, Optional.empty(), source, target, targetTableRowIdColumnVariable, mergeRowVariable, targetColumnVariables, outputs);
+        this(sourceLocation, id, Optional.empty(), source, target, targetTableRowIdColumnVariable, mergeRowVariable, targetColumnVariables, targetRedistributionColumnVariables, outputs);
     }
 
     public MergeProcessorNode(
@@ -65,6 +67,7 @@ public class MergeProcessorNode
             VariableReferenceExpression targetTableRowIdColumnVariable,
             VariableReferenceExpression mergeRowVariable,
             List<VariableReferenceExpression> targetColumnVariables,
+            List<VariableReferenceExpression> targetRedistributionColumnVariables,
             List<VariableReferenceExpression> outputs)
     {
         super(sourceLocation, id, statsEquivalentPlanNode);
@@ -74,6 +77,7 @@ public class MergeProcessorNode
         this.mergeRowVariable = requireNonNull(mergeRowVariable, "mergeRowVariable is null");
         this.targetTableRowIdColumnVariable = requireNonNull(targetTableRowIdColumnVariable, "targetTableRowIdColumnVariable is null");
         this.targetColumnVariables = requireNonNull(targetColumnVariables, "targetColumnVariables is null");
+        this.targetRedistributionColumnVariables = requireNonNull(targetRedistributionColumnVariables, "targetRedistributionColumnVariables is null");
         this.outputs = ImmutableList.copyOf(requireNonNull(outputs, "outputs is null"));
     }
 
@@ -107,6 +111,12 @@ public class MergeProcessorNode
         return targetColumnVariables;
     }
 
+    @JsonProperty
+    public List<VariableReferenceExpression> getTargetRedistributionColumnVariables()
+    {
+        return targetRedistributionColumnVariables;
+    }
+
     @JsonProperty("outputs")
     @Override
     public List<VariableReferenceExpression> getOutputVariables()
@@ -130,13 +140,13 @@ public class MergeProcessorNode
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         return new MergeProcessorNode(getSourceLocation(), getId(), Iterables.getOnlyElement(newChildren),
-                target, targetTableRowIdColumnVariable, mergeRowVariable, targetColumnVariables, outputs);
+                target, targetTableRowIdColumnVariable, mergeRowVariable, targetColumnVariables, targetRedistributionColumnVariables, outputs);
     }
 
     @Override
     public PlanNode assignStatsEquivalentPlanNode(Optional<PlanNode> statsEquivalentPlanNode)
     {
         return new MergeProcessorNode(getSourceLocation(), getId(), statsEquivalentPlanNode, source, target,
-                targetTableRowIdColumnVariable, mergeRowVariable, targetColumnVariables, outputs);
+                targetTableRowIdColumnVariable, mergeRowVariable, targetColumnVariables, targetRedistributionColumnVariables, outputs);
     }
 }

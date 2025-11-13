@@ -295,6 +295,7 @@ public class SymbolMapper
                 source,
                 node.getTarget(),
                 map(node.getMergeProcessorProjectedVariables()),
+                node.getPartitioningScheme().map(partitioningScheme -> map(partitioningScheme, source.getOutputVariables())),
                 newOutputs);
     }
 
@@ -309,6 +310,7 @@ public class SymbolMapper
                 source,
                 node.getTarget(),
                 map(node.getMergeProcessorProjectedVariables()),
+                node.getPartitioningScheme().map(partitioningScheme -> map(partitioningScheme, source.getOutputVariables())),
                 newOutputs);
     }
 
@@ -324,6 +326,7 @@ public class SymbolMapper
                 map(node.getTargetTableRowIdColumnVariable()),
                 map(node.getMergeRowVariable()),
                 map(node.getTargetColumnVariables()),
+                map(node.getTargetRedistributionColumnVariables()),
                 newOutputs);
     }
 

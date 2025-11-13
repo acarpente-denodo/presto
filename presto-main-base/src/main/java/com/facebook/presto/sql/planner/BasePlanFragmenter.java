@@ -270,6 +270,9 @@ public abstract class BasePlanFragmenter
     @Override
     public PlanNode visitMergeWriter(MergeWriterNode node, RewriteContext<FragmentProperties> context)
     {
+        if (node.getPartitioningScheme().isPresent()) {
+            context.get().setDistribution(node.getPartitioningScheme().get().getPartitioning().getHandle(), metadata, session);
+        }
         return context.defaultRewrite(node, context.get());
     }
 

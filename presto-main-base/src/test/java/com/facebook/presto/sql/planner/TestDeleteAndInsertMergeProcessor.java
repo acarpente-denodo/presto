@@ -183,7 +183,7 @@ Page[positions=8 0:Dict[VarWidth["Aaron", "Dave", "Dave", "Ed", "Aaron", "Carol"
         List<Type> types = ImmutableList.of(VARCHAR, INTEGER, VARCHAR);
 
         RowType rowIdType = RowType.anonymous(ImmutableList.of(BIGINT, BIGINT, INTEGER));
-        return new DeleteAndInsertMergeProcessor(types, rowIdType, 0, 1, ImmutableList.of(0, 1, 2));
+        return new DeleteAndInsertMergeProcessor(types, rowIdType, 0, 1, ImmutableList.of(), ImmutableList.of(0, 1, 2));
     }
 
     private String getString(Block block, int position)
