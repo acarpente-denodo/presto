@@ -41,15 +41,18 @@ public class ChangeOnlyUpdatedColumnsMergeProcessor
     private final int rowIdChannel;
     private final int mergeRowChannel;
     private final List<Integer> dataColumnChannels;
+    private final int writeRedistributionColumnCount;
 
     public ChangeOnlyUpdatedColumnsMergeProcessor(
             int rowIdChannel,
             int mergeRowChannel,
-            List<Integer> targetColumnChannels)
+            List<Integer> targetColumnChannels,
+            List<Integer> redistributionColumnChannels)
     {
         this.rowIdChannel = rowIdChannel;
         this.mergeRowChannel = mergeRowChannel;
         this.dataColumnChannels = requireNonNull(targetColumnChannels, "targetColumnChannels is null");
+        this.writeRedistributionColumnCount = redistributionColumnChannels.size();
     }
 
     @Override
@@ -58,7 +61,7 @@ public class ChangeOnlyUpdatedColumnsMergeProcessor
         requireNonNull(inputPage, "inputPage is null");
 
         int inputChannelCount = inputPage.getChannelCount();
-        checkArgument(inputChannelCount >= 2, "inputPage channelCount (%s)", inputChannelCount);
+        checkArgument(inputChannelCount >= 2 + writeRedistributionColumnCount, "inputPage channelCount (%s) should be >= 2 + %s", inputChannelCount, writeRedistributionColumnCount);
         int positionCount = inputPage.getPositionCount();
         checkArgument(positionCount > 0, "positionCount should be > 0, but is %s", positionCount);
 

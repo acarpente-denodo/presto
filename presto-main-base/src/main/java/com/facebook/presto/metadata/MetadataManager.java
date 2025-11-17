@@ -976,6 +976,18 @@ public class MetadataManager
     }
 
     @Override
+    public Optional<PartitioningHandle> getMergeUpdateLayout(Session session, TableHandle tableHandle)
+    {
+        ConnectorId connectorId = tableHandle.getConnectorId();
+        CatalogMetadata catalogMetadata = getCatalogMetadataForWrite(session, connectorId);
+        ConnectorMetadata metadata = catalogMetadata.getMetadata();
+        ConnectorTransactionHandle transactionHandle = catalogMetadata.getTransactionHandleFor(connectorId);
+
+        return metadata.getMergeUpdateLayout(session.toConnectorSession(connectorId), tableHandle.getConnectorHandle())
+                .map(partitioning -> new PartitioningHandle(Optional.of(connectorId), Optional.of(transactionHandle), partitioning));
+    }
+
+    @Override
     public boolean supportsMetadataDelete(Session session, TableHandle tableHandle)
     {
         ConnectorId connectorId = tableHandle.getConnectorId();

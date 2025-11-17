@@ -282,12 +282,20 @@ public abstract class ExecutionWriterTarget
             extends ExecutionWriterTarget
     {
         private final com.facebook.presto.spi.MergeHandle handle;
+        // TODO #20578: Uncomment if finally it is necessary.
+//        private final SchemaTableName schemaTableName;
+//        private final ConnectorMergeTableHandle connectorMergeTableHandle;
 
         @JsonCreator
         @ThriftConstructor
-        public MergeHandle(@JsonProperty("handle") com.facebook.presto.spi.MergeHandle handle)
+        public MergeHandle(
+                @JsonProperty("handle") com.facebook.presto.spi.MergeHandle handle)
+//                @JsonProperty("schemaTableName") SchemaTableName schemaTableName,
+//                @JsonProperty("connectorMergeTableHandle") ConnectorMergeTableHandle connectorMergeTableHandle)
         {
             this.handle = requireNonNull(handle, "tableHandle is null");
+//            this.schemaTableName = requireNonNull(schemaTableName, "schemaTableName is null");
+//            this.connectorMergeTableHandle = requireNonNull(connectorMergeTableHandle, "connectorMergeTableHandle is null");
         }
 
         @JsonProperty
@@ -296,6 +304,18 @@ public abstract class ExecutionWriterTarget
         {
             return handle;
         }
+
+//        @JsonProperty
+//        public SchemaTableName getSchemaTableName()
+//        {
+//            return schemaTableName;
+//        }
+
+//        @JsonProperty
+//        public ConnectorMergeTableHandle getConnectorMergeTableHandle()
+//        {
+//            return connectorMergeTableHandle;
+//        }
 
         @Override
         public String toString()
