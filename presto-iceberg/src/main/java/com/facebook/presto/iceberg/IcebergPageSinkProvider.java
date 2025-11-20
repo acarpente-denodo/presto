@@ -115,6 +115,8 @@ public class IcebergPageSinkProvider
 
         Schema schema = toIcebergSchema(tableHandle.getSchema());
         PartitionSpec partitionSpec = toIcebergPartitionSpec(tableHandle.getPartitionSpec()).toUnbound().bind(schema);
+        // TODO #20578: In Trino, they use "Map<Integer, PartitionSpec>" instead of "PartitionSpec". Should Presto do the same?
+        //  Map<Integer, PartitionSpec> partitionsSpecs = transformValues(tableHandle.getPartitionsSpecsAsJson(), json -> PartitionSpecParser.fromJson(schema, json));
 
         ConnectorPageSink pageSink = createPageSink(session, tableHandle);
 
@@ -125,6 +127,8 @@ public class IcebergPageSinkProvider
                 jsonCodec,
                 session,
                 tableHandle.getFileFormat(),
+                tableHandle.getStorageProperties(),
+                schema,
                 partitionSpec,
                 pageSink,
                 tableHandle.getInputColumns().size());

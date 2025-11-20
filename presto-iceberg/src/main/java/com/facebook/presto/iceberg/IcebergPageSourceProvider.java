@@ -253,6 +253,9 @@ public class IcebergPageSourceProvider
             Path path,
             long start,
             long length,
+            /* TODO #20578: Add these parameters to the method signature if necessary.
+            int partitionSpecId,
+            String partitionData,*/
             List<IcebergColumnHandle> regularColumns,
             TupleDomain<IcebergColumnHandle> effectivePredicate,
             FileFormatDataSourceStats fileFormatDataSourceStats,
@@ -825,6 +828,9 @@ public class IcebergPageSourceProvider
                         split.getStart(),
                         split.getLength(),
                         split.getFileFormat(),
+                        // TODO #20578: Add the following parameters to the IcebergPageSourceProvider class constructor.
+                        //         partitionSpec.specId(),
+                        //         split.getPartitionDataJson(),
                         columnList,
                         icebergLayout.getValidPredicate(),
                         splitContext.isCacheable());
@@ -1063,7 +1069,9 @@ public class IcebergPageSourceProvider
             FileFormat fileFormat,
             List<IcebergColumnHandle> dataColumns,
             TupleDomain<IcebergColumnHandle> predicate,
-            boolean isCacheable)
+            boolean isCacheable/*, TODO #20578: Add these parameters to the method signature:
+            int partitionSpecId,
+            String partitionData,*/)
     {
         switch (fileFormat) {
             case PARQUET:

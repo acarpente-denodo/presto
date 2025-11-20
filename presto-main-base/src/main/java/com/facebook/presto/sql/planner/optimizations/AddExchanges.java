@@ -761,7 +761,9 @@ public class AddExchanges
         @Override
         public PlanWithProperties visitMergeWriter(MergeWriterNode node, PreferredProperties preferredProperties)
         {
-            return getTableWriterPlanWithProperties(node, preferredProperties, Optional.empty(), false);
+            Optional<PartitioningScheme> partitioningScheme = node.getPartitioningScheme();
+            boolean isSingleWriterPerPartitionRequired = partitioningScheme.isPresent() && !partitioningScheme.get().isScaleWriters();
+            return getTableWriterPlanWithProperties(node, preferredProperties, partitioningScheme, isSingleWriterPerPartitionRequired);
         }
 
         @Override
