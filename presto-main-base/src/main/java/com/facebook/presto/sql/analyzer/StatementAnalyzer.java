@@ -2225,7 +2225,7 @@ class StatementAnalyzer
                 // Add the target table row id field used to process the MERGE command.
                 ColumnHandle targetTableRowIdColumnHandle = metadata.getMergeTargetTableRowIdColumnHandle(session, tableHandle.get());
                 Type targetTableRowIdType = metadata.getColumnMetadata(session, tableHandle.get(), targetTableRowIdColumnHandle).getType();
-                Field targetTableRowIdField = Field.newUnqualified(Optional.empty(), "$target_table_row_id", targetTableRowIdType);
+                Field targetTableRowIdField = Field.newUnqualified(table.getLocation(), "$target_table_row_id", targetTableRowIdType);
                 fields.add(targetTableRowIdField);
                 analysis.setColumn(targetTableRowIdField, targetTableRowIdColumnHandle);
             }

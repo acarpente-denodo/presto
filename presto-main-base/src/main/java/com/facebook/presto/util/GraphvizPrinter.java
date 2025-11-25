@@ -135,7 +135,7 @@ public final class GraphvizPrinter
         ANALYZE_FINISH,
         EXPLAIN_ANALYZE,
         UPDATE,
-        MERGE
+        MERGE,
     }
 
     private static final Map<NodeType, String> NODE_COLORS = immutableEnumMap(ImmutableMap.<NodeType, String>builder()

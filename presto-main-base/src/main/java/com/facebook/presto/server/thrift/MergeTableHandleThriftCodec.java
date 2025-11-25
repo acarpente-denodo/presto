@@ -26,6 +26,7 @@ import javax.inject.Inject;
 
 import java.nio.ByteBuffer;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 public class MergeTableHandleThriftCodec
@@ -61,7 +62,7 @@ public class MergeTableHandleThriftCodec
             throws Exception
     {
         ByteBuffer byteBuffer = reader.readBinary();
-        assert (byteBuffer.position() == 0);
+        checkArgument(byteBuffer.position() == 0, "Buffer position should be 0, but is %s", byteBuffer.position());
         byte[] bytes = byteBuffer.array();
         return connectorCodecManager.getMergeTableHandleCodec(connectorId).map(codec -> codec.deserialize(bytes)).orElse(null);
     }
