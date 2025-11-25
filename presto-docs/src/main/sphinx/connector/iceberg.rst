@@ -1753,7 +1753,7 @@ updates.
 
     Query 20250204_010445_00022_ymwi5 failed: Iceberg table updates require at least format version 2 and update mode must be merge-on-read
 
-Iceberg tables do not support running multiple ``MERGE`` statements on the same table in parallel. If two or more ``MERGE`` operations are executed concurrently on the same Iceberg table:
+Iceberg tables do not support running multiple :doc:`../sql/merge` statements on the same table in parallel. If two or more ``MERGE`` operations are executed concurrently on the same Iceberg table:
 
 * The first operation to complete will succeed.
 * Subsequent operations will fail due to conflicting writes and will return the following error:
