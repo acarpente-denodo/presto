@@ -338,4 +338,35 @@ public class TestDeltaIntegration
                 Paths.get(URI.create(tableLocation)).resolve("_delta_log/").resolve(format("%020d.json", commitId)),
                 FileTime.from(commitTimeMillis, TimeUnit.MILLISECONDS));
     }
+
+    @Test
+    public void testShowCreateTable()
+    {
+        String tableColumns =
+                "   \"as_int\" integer,\n" +
+                "   \"as_long\" bigint,\n" +
+                "   \"as_byte\" tinyint,\n" +
+                "   \"as_short\" smallint,\n" +
+                "   \"as_boolean\" boolean,\n" +
+                "   \"as_float\" real,\n" +
+                "   \"as_double\" double,\n" +
+                "   \"as_string\" varchar,\n" +
+                "   \"as_binary\" varbinary,\n" +
+                "   \"as_big_decimal\" decimal(1,0)";
+
+        for (String deltaVersion : DELTA_VERSIONS) {
+            String tableName = deltaVersion + "/data-reader-primitives";
+            String fullTableName = format("%s.%s.\"%s\"", DELTA_CATALOG, DELTA_SCHEMA.toLowerCase(), tableName);
+
+            String expectedSqlCommand = format(
+                    "CREATE TABLE %s (\n%s\n)\nWITH (\n   external_location = '%s'\n)",
+                    fullTableName,
+                    tableColumns,
+                    goldenTablePath(tableName));
+
+            String showCreateTableCommandResult = (String) computeActual("SHOW CREATE TABLE " + fullTableName).getOnlyValue();
+
+            assertEquals(showCreateTableCommandResult, expectedSqlCommand);
+        }
+    }
 }

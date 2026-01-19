@@ -46,6 +46,7 @@ import com.google.common.collect.ImmutableMultimap;
 import jakarta.inject.Inject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -273,7 +274,7 @@ public class DeltaMetadata
     {
         DeltaTableHandle deltaTableHandle = (DeltaTableHandle) table;
         checkConnectorId(deltaTableHandle);
-        return getTableMetadata(session, deltaTableHandle.toSchemaTableName());
+        return getTableMetadata(session, deltaTableHandle.toSchemaTableName(), deltaTableHandle.getDeltaTable());
     }
 
     @Override
@@ -315,7 +316,7 @@ public class DeltaMetadata
         requireNonNull(prefix, "prefix is null");
         ImmutableMap.Builder<SchemaTableName, List<ColumnMetadata>> columns = ImmutableMap.builder();
         for (SchemaTableName tableName : listTables(session, prefix)) {
-            ConnectorTableMetadata tableMetadata = getTableMetadata(session, tableName);
+            ConnectorTableMetadata tableMetadata = getTableMetadata(session, tableName, null);
             // table can disappear during listing operation
             if (tableMetadata != null) {
                 columns.put(tableName, tableMetadata.getColumns());
@@ -324,18 +325,24 @@ public class DeltaMetadata
         return columns.build();
     }
 
-    private ConnectorTableMetadata getTableMetadata(ConnectorSession session, SchemaTableName tableName)
+    private ConnectorTableMetadata getTableMetadata(ConnectorSession session, SchemaTableName tableName, DeltaTable table)
     {
         DeltaTableHandle tableHandle = getTableHandle(session, tableName);
         if (tableHandle == null) {
             return null;
         }
 
+        // External location property
+        Map<String, Object> properties = new HashMap<>(1);
+        if (table != null && table.getTableLocation() != null) {
+            properties.put(DeltaTableProperties.EXTERNAL_LOCATION_PROPERTY, table.getTableLocation());
+        }
+
         List<ColumnMetadata> columnMetadata = tableHandle.getDeltaTable().getColumns().stream()
                 .map(column -> getColumnMetadata(session, column))
                 .collect(Collectors.toList());
 
-        return new ConnectorTableMetadata(tableName, columnMetadata);
+        return new ConnectorTableMetadata(tableName, columnMetadata, properties);
     }
 
     @Override
