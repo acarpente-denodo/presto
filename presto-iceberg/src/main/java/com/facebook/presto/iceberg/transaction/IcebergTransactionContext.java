@@ -13,9 +13,11 @@
  */
 package com.facebook.presto.iceberg.transaction;
 
+import com.facebook.airlift.log.Logger;
 import com.facebook.presto.spi.PrestoException;
 import com.facebook.presto.spi.SchemaTableName;
 import com.facebook.presto.spi.transaction.IsolationLevel;
+import jakarta.annotation.Nullable;
 import org.apache.iceberg.AppendFiles;
 import org.apache.iceberg.BaseTable;
 import org.apache.iceberg.DataTableScan;
@@ -29,7 +31,9 @@ import org.apache.iceberg.ReplaceSortOrder;
 import org.apache.iceberg.RewriteFiles;
 import org.apache.iceberg.RewriteManifests;
 import org.apache.iceberg.RowDelta;
+import org.apache.iceberg.Snapshot;
 import org.apache.iceberg.Table;
+import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.TableOperations;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.Transaction;
@@ -42,10 +46,12 @@ import org.apache.iceberg.UpdateStatistics;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import static com.facebook.presto.iceberg.IcebergCommitFailures.toPrestoException;
 import static com.facebook.presto.iceberg.IcebergErrorCode.ICEBERG_TRANSACTION_CONFLICT_ERROR;
 import static com.facebook.presto.iceberg.IcebergUtil.opsFromTable;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -55,9 +61,11 @@ import static org.apache.iceberg.IcebergLibUtils.getScanContext;
 
 public class IcebergTransactionContext
 {
+    private static final Logger log = Logger.get(IcebergTransactionContext.class);
+
     private final IsolationLevel isolationLevel;
     private final boolean autoCommitContext;
-    private final Map<SchemaTableName, Transaction> txByTable;
+    private final Map<SchemaTableName, PendingTransaction> txByTable;
     private final Map<SchemaTableName, Table> initiallyReadTables;
     private final AtomicReference<Runnable> callbacksOnCommit = new AtomicReference<>();
 
@@ -81,20 +89,12 @@ public class IcebergTransactionContext
 
     public Optional<Table> getTransactionTable(SchemaTableName tableName)
     {
-        if (txByTable.containsKey(tableName)) {
-            return Optional.ofNullable(txByTable.get(tableName).table());
-        }
-
-        return Optional.empty();
+        return getTransaction(tableName).map(Transaction::table);
     }
 
     public Optional<Transaction> getTransaction(SchemaTableName tableName)
     {
-        if (txByTable.containsKey(tableName)) {
-            return Optional.ofNullable(txByTable.get(tableName));
-        }
-
-        return Optional.empty();
+        return Optional.ofNullable(txByTable.get(tableName)).map(PendingTransaction::getTransaction);
     }
 
     public Optional<Table> initiallyReadTable(SchemaTableName tableName)
@@ -109,7 +109,8 @@ public class IcebergTransactionContext
     public void registerTransaction(SchemaTableName tableName, Transaction transaction)
     {
         if (txByTable.isEmpty()) {
-            txByTable.put(tableName, transaction);
+            // the table this transaction creates does not exist yet, so there is no state to conflict with
+            txByTable.put(tableName, new PendingTransaction(transaction, null));
         }
         else if (!txByTable.containsKey(tableName)) {
             throw new PrestoException(ICEBERG_TRANSACTION_CONFLICT_ERROR, "Not allowed to open write transactions on different tables");
@@ -137,7 +138,14 @@ public class IcebergTransactionContext
     public void commit()
     {
         if (!txByTable.isEmpty()) {
-            getOnlyElement(txByTable.values().iterator()).commitTransaction();
+            Map.Entry<SchemaTableName, PendingTransaction> entry = getOnlyElement(txByTable.entrySet().iterator());
+            PendingTransaction pendingTransaction = entry.getValue();
+            try {
+                pendingTransaction.getTransaction().commitTransaction();
+            }
+            catch (RuntimeException e) {
+                throw toPrestoException(e, entry.getKey(), pendingTransaction::isTableChangedConcurrently);
+            }
             if (callbacksOnCommit.get() != null) {
                 callbacksOnCommit.get().run();
             }
@@ -165,7 +173,59 @@ public class IcebergTransactionContext
 
         return txByTable.computeIfAbsent(
                 tableName,
-                k -> Transactions.newTransaction(table.name(), ((HasTableOperations) table).operations()));
+                k -> {
+                    TableOperations operations = ((HasTableOperations) table).operations();
+                    return new PendingTransaction(Transactions.newTransaction(table.name(), operations), operations);
+                })
+                .getTransaction();
+    }
+
+    /**
+     * An Iceberg {@link Transaction} together with the state needed to tell, once its commit is
+     * rejected, whether the rejection was caused by another writer committing to the same table.
+     */
+    private static class PendingTransaction
+    {
+        private final Transaction transaction;
+        @Nullable
+        private final TableOperations operations;
+        private final OptionalLong baseSnapshotId;
+
+        PendingTransaction(Transaction transaction, @Nullable TableOperations operations)
+        {
+            this.transaction = requireNonNull(transaction, "transaction is null");
+            this.operations = operations;
+            this.baseSnapshotId = operations == null ? OptionalLong.empty() : currentSnapshotId(operations.current());
+        }
+
+        Transaction getTransaction()
+        {
+            return transaction;
+        }
+
+        boolean isTableChangedConcurrently()
+        {
+            if (operations == null) {
+                return false;
+            }
+
+            try {
+                return !currentSnapshotId(operations.refresh()).equals(baseSnapshotId);
+            }
+            catch (RuntimeException e) {
+                // Without the current state of the table there is no way to tell a conflict from a
+                // deterministic failure. Assume the commit lost a race, so that the more common case
+                // stays retriable; a table that cannot be read will fail the retry right away anyway.
+                log.debug(e, "Could not refresh %s to tell whether its commit hit a concurrent modification", transaction.table().name());
+                return true;
+            }
+        }
+
+        private static OptionalLong currentSnapshotId(TableMetadata metadata)
+        {
+            Snapshot snapshot = metadata.currentSnapshot();
+            return snapshot == null ? OptionalLong.empty() : OptionalLong.of(snapshot.snapshotId());
+        }
     }
 
     private class TransactionalTable

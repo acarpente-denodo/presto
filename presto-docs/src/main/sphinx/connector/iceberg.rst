@@ -2424,6 +2424,23 @@ Iceberg tables do not support running multiple :doc:`../sql/merge` statements on
     Failed to commit Iceberg update to table: <table name>
     Found conflicting files that can contain records matching true
 
+Concurrent writes
+^^^^^^^^^^^^^^^^^
+
+When two statements write to the same Iceberg table at the same time, Iceberg rejects the
+commit of the statement that loses the race. Nothing is written by that statement, so
+Presto reports the failure with the retriable ``ICEBERG_COMMIT_CONFLICT`` error code:
+
+.. code-block:: text
+
+    Failed to commit Iceberg update to table <table name> because it was concurrently modified
+
+Set the ``per-query-retry-limit`` configuration property, or the ``query_retry_limit``
+session property, to a value greater than ``0`` to have the coordinator run such a
+statement again against the new state of the table instead of failing it. Retries are
+disabled by default and only apply to statements running in autocommit mode: a commit
+conflict raised by :doc:`/sql/commit` is always reported to the client.
+
 Transaction support
 ^^^^^^^^^^^^^^^^^^^
 
